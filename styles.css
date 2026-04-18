@@ -525,7 +525,7 @@ fieldset.field {
 #rsvp-form { text-align: left; }
 
 @media (min-width: 640px) {
-  .radios { grid-template-columns: repeat(3, 1fr); }
+  .radios { grid-template-columns: repeat(2, 1fr); }
   .activities { grid-template-columns: repeat(2, 1fr); }
   .field-row { grid-template-columns: 1fr 1fr; }
   .info-grid { grid-template-columns: 1fr 1fr; }
