@@ -19,11 +19,9 @@
 
   const cleanName = prettify(sanitize(rawName));
   const nameTarget = document.getElementById("guest-name");
-  const hiddenLinkName = document.getElementById("guest-link-name");
 
-  if (cleanName) {
+  if (cleanName && nameTarget) {
     nameTarget.textContent = cleanName;
-    hiddenLinkName.value = cleanName;
     const fullname = document.getElementById("fullname");
     if (fullname && !fullname.value) fullname.value = cleanName;
   }
@@ -33,12 +31,13 @@
 
   if (!form) return;
 
-  const presenceRadios = form.querySelectorAll('input[name="entry.PRESENCE"]');
+  const PRESENCE_NAME = "entry.455410023";
+  const presenceRadios = form.querySelectorAll('input[name="' + PRESENCE_NAME + '"]');
   const activities = form.querySelector(".activities");
 
   const syncActivitiesState = () => {
-    const selected = form.querySelector('input[name="entry.PRESENCE"]:checked');
-    const disabled = selected && selected.value.startsWith("Non");
+    const selected = form.querySelector('input[name="' + PRESENCE_NAME + '"]:checked');
+    const disabled = selected && selected.value === "Non";
     activities
       .querySelectorAll('input[type="checkbox"]')
       .forEach((cb) => {
@@ -54,14 +53,6 @@
   form.addEventListener("submit", (event) => {
     if (!form.checkValidity()) return;
 
-    if (form.action.includes("FORM_ACTION_URL")) {
-      event.preventDefault();
-      status.className = "form-status error";
-      status.textContent =
-        "Formulaire pas encore connecté à Google Sheets — voir les instructions dans index.html.";
-      return;
-    }
-
     status.className = "form-status";
     status.textContent = "Envoi en cours…";
 
@@ -72,8 +63,8 @@
       form.reset();
       syncActivitiesState();
       if (cleanName) {
-        document.getElementById("fullname").value = cleanName;
-        hiddenLinkName.value = cleanName;
+        const fullname = document.getElementById("fullname");
+        if (fullname) fullname.value = cleanName;
       }
     }, 900);
   });

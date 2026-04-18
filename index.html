@@ -2,22 +2,11 @@
   Site d'invitation — Anniversaires conjoints — 29-30 août 2026
   Chemin de Closel 3, 2035 Corcelles
 
-  Pour personnaliser un invité : partager le lien avec ?nom=Prenom
+  Personnaliser le lien par invité : ?nom=Prenom
   Exemple : https://monsite.ch/?nom=Marie
 
-  Pour connecter les RSVP à Google Sheets :
-  1. Créer un Google Form avec ces champs (même ordre) :
-     - Nom complet (texte)
-     - Email (texte)
-     - Présence (choix : Oui / Non / Peut-être)
-     - Activités (cases : Pilates, Dîner samedi, Chasse au trésor, Souper samedi, Dimanche)
-     - Nombre d'accompagnants (texte)
-     - Allergies / régime (paragraphe)
-     - Message (paragraphe)
-  2. Dans l'onglet "Réponses" du Form, lier une feuille Google Sheets.
-  3. Récupérer l'URL d'envoi du formulaire (view-source du Form → chercher "formResponse")
-     et l'entry.XXXXX pour chaque champ.
-  4. Remplacer FORM_ACTION_URL et les name="entry.XXXXX" dans le <form> ci-dessous.
+  RSVP : connecté au Google Form 1FAIpQLSduiFz6WBdr_oS1XUm6zpQBhO17O_heW_EwURT70vqjDxxuvQ
+  (voir action du <form> ci-dessous).
 -->
 <!DOCTYPE html>
 <html lang="fr">
@@ -144,30 +133,30 @@
     <h2 id="rsvp-title">Votre réponse</h2>
     <p class="section-lede">Merci de répondre avant le <strong>1er août 2026</strong>. Chaque activité demande une inscription pour qu'on prévoie la logistique.</p>
 
-    <form id="rsvp-form" action="FORM_ACTION_URL" method="POST" target="hidden-iframe" novalidate>
+    <form id="rsvp-form" action="https://docs.google.com/forms/d/e/1FAIpQLSduiFz6WBdr_oS1XUm6zpQBhO17O_heW_EwURT70vqjDxxuvQ/formResponse" method="POST" target="hidden-iframe" novalidate>
       <div class="field">
         <label for="fullname">Votre nom complet</label>
-        <input type="text" id="fullname" name="entry.FULLNAME" required autocomplete="name" />
+        <input type="text" id="fullname" name="entry.345983301" required autocomplete="name" />
       </div>
 
       <div class="field">
         <label for="email">Email</label>
-        <input type="email" id="email" name="entry.EMAIL" required autocomplete="email" />
+        <input type="email" id="email" name="entry.1623092840" required autocomplete="email" />
       </div>
 
       <fieldset class="field" role="radiogroup" aria-labelledby="presence-legend">
         <legend id="presence-legend">Serez-vous des nôtres ?</legend>
         <div class="radios">
           <label class="radio-card">
-            <input type="radio" name="entry.PRESENCE" value="Oui, le weekend complet" required />
-            <span>Oui, weekend complet</span>
+            <input type="radio" name="entry.455410023" value="Oui" required />
+            <span>Oui</span>
           </label>
           <label class="radio-card">
-            <input type="radio" name="entry.PRESENCE" value="Oui, partiellement" />
-            <span>Oui, partiellement</span>
+            <input type="radio" name="entry.455410023" value="Peut-être" />
+            <span>Peut-être</span>
           </label>
           <label class="radio-card">
-            <input type="radio" name="entry.PRESENCE" value="Non, je ne peux pas" />
+            <input type="radio" name="entry.455410023" value="Non" />
             <span>Hélas non</span>
           </label>
         </div>
@@ -176,23 +165,23 @@
       <fieldset class="field activities" aria-labelledby="activities-legend">
         <legend id="activities-legend">À quelles activités participez-vous ?</legend>
         <label class="check-card">
-          <input type="checkbox" name="entry.ACTIVITIES" value="Pilates samedi 10h" />
+          <input type="checkbox" name="entry.1373291749" value="Pilates" />
           <span><strong>Pilates</strong><em>Sam. 10h00</em></span>
         </label>
         <label class="check-card">
-          <input type="checkbox" name="entry.ACTIVITIES" value="Dîner samedi 12h30" />
+          <input type="checkbox" name="entry.1373291749" value="Dîner samedi" />
           <span><strong>Dîner</strong><em>Sam. 12h30</em></span>
         </label>
         <label class="check-card">
-          <input type="checkbox" name="entry.ACTIVITIES" value="Chasse au trésor samedi 15h" />
+          <input type="checkbox" name="entry.1373291749" value="Chasse au trésor" />
           <span><strong>Chasse au trésor</strong><em>Sam. 15h00</em></span>
         </label>
         <label class="check-card">
-          <input type="checkbox" name="entry.ACTIVITIES" value="Souper samedi 19h30" />
+          <input type="checkbox" name="entry.1373291749" value="Souper samedi" />
           <span><strong>Souper</strong><em>Sam. 19h30</em></span>
         </label>
         <label class="check-card">
-          <input type="checkbox" name="entry.ACTIVITIES" value="Brunch dimanche 11h" />
+          <input type="checkbox" name="entry.1373291749" value="Dimanche" />
           <span><strong>Brunch</strong><em>Dim. 11h00</em></span>
         </label>
       </fieldset>
@@ -200,20 +189,18 @@
       <div class="field-row">
         <div class="field">
           <label for="guests">Accompagnants (vous inclus)</label>
-          <input type="number" id="guests" name="entry.GUESTS" min="1" max="10" value="1" />
+          <input type="number" id="guests" name="entry.1430696633" min="1" max="10" value="1" />
         </div>
         <div class="field">
           <label for="diet">Allergies ou régime</label>
-          <input type="text" id="diet" name="entry.DIET" placeholder="Aucune / végétarien / sans gluten…" />
+          <input type="text" id="diet" name="entry.1862615726" placeholder="Aucune / végétarien / sans gluten…" />
         </div>
       </div>
 
       <div class="field">
         <label for="message">Un petit mot pour les héros du weekend ?</label>
-        <textarea id="message" name="entry.MESSAGE" rows="3" placeholder="Optionnel"></textarea>
+        <textarea id="message" name="entry.250600536" rows="3" placeholder="Optionnel"></textarea>
       </div>
-
-      <input type="hidden" id="guest-link-name" name="entry.LINKNAME" value="" />
 
       <button type="submit" class="cta">Envoyer ma réponse</button>
       <p id="form-status" class="form-status" role="status" aria-live="polite"></p>
