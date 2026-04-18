@@ -13,8 +13,8 @@
   --blue: #6b7f8c;
   --shadow: 0 22px 50px -25px rgba(31, 28, 23, 0.45);
   --radius: 6px;
-  --font-serif: "Cormorant Garamond", "Hoefler Text", Georgia, serif;
-  --font-script: "Pinyon Script", cursive;
+  --font-serif: "Playfair Display", "Hoefler Text", Georgia, serif;
+  --font-script: "Allura", cursive;
 }
 
 * { box-sizing: border-box; }
@@ -25,9 +25,9 @@ body {
   margin: 0;
   font-family: var(--font-serif);
   color: var(--ink);
-  line-height: 1.55;
-  font-size: 18px;
-  font-weight: 500;
+  line-height: 1.6;
+  font-size: 17px;
+  font-weight: 400;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
   background-color: var(--kraft);
@@ -97,6 +97,45 @@ p { margin: 0 0 0.6rem; }
 .card::before { top: 1rem; }
 .card::after { bottom: 1rem; }
 
+.card-artwork {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+  height: auto;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
+.card-artwork--skull {
+  width: min(280px, 65%);
+  margin: -0.5rem auto 0.5rem;
+  filter: drop-shadow(0 8px 18px rgba(31, 28, 23, 0.2));
+}
+
+.card-artwork--koi {
+  width: min(180px, 45%);
+  margin: 0 auto 0.4rem;
+  filter: drop-shadow(0 6px 14px rgba(31, 28, 23, 0.18));
+  transform: rotate(-6deg);
+}
+
+.rsvp {
+  text-align: center;
+}
+
+.rsvp h2 {
+  margin-top: 0;
+}
+
+.rsvp .section-lede {
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+#rsvp-form { text-align: left; }
+
 .card-eyebrow {
   text-transform: uppercase;
   letter-spacing: 0.35em;
@@ -119,7 +158,7 @@ p { margin: 0 0 0.6rem; }
   font-family: var(--font-script);
   font-weight: 400;
   color: var(--ink);
-  font-size: clamp(2.4rem, 9vw, 3.6rem);
+  font-size: clamp(3rem, 11vw, 4.4rem);
   line-height: 1.05;
 }
 
@@ -127,9 +166,9 @@ p { margin: 0 0 0.6rem; }
   font-family: var(--font-script);
   font-weight: 400;
   color: var(--ink);
-  font-size: clamp(2.4rem, 9vw, 3.6rem);
+  font-size: clamp(3rem, 11vw, 4.4rem);
   line-height: 1.05;
-  margin-top: -0.15em;
+  margin-top: -0.2em;
 }
 
 .arrow-divider {
@@ -157,7 +196,7 @@ p { margin: 0 0 0.6rem; }
 
 .card-greeting {
   font-family: var(--font-script);
-  font-size: clamp(1.6rem, 5vw, 2rem);
+  font-size: clamp(2rem, 6vw, 2.6rem);
   color: var(--ink);
   margin: 0 0 0.4rem;
   font-weight: 400;
@@ -218,7 +257,7 @@ p { margin: 0 0 0.6rem; }
 
 .honorees .name {
   font-family: var(--font-script);
-  font-size: 1.55rem;
+  font-size: 2rem;
   color: var(--rose);
   font-weight: 400;
   line-height: 1;
@@ -418,7 +457,7 @@ p { margin: 0 0 0.6rem; }
 
 .slot-body h4 {
   font-family: var(--font-script);
-  font-size: 1.7rem;
+  font-size: 2.2rem;
   font-weight: 400;
   color: var(--ink);
   line-height: 1;
@@ -547,7 +586,7 @@ fieldset.field {
 
 .check-card strong {
   font-family: var(--font-script);
-  font-size: 1.4rem;
+  font-size: 1.9rem;
   font-weight: 400;
   color: var(--ink);
   line-height: 1;
@@ -595,10 +634,10 @@ fieldset.field {
 
 .info-grid h3 {
   font-family: var(--font-script);
-  font-size: 1.6rem;
+  font-size: 2.1rem;
   font-weight: 400;
   color: var(--rose);
-  margin-bottom: 0.2rem;
+  margin-bottom: 0.3rem;
   line-height: 1;
 }
 
@@ -621,7 +660,7 @@ fieldset.field {
 
 .footer-names {
   font-family: var(--font-script);
-  font-size: 1.4rem;
+  font-size: 1.9rem;
   color: var(--ink);
   margin: 0;
   line-height: 1.2;
