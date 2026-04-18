@@ -1,0 +1,251 @@
+<!--
+  Site d'invitation — Anniversaires conjoints — 29-30 août 2026
+  Chemin de Closel 3, 2035 Corcelles
+
+  Pour personnaliser un invité : partager le lien avec ?nom=Prenom
+  Exemple : https://monsite.ch/?nom=Marie
+
+  Pour connecter les RSVP à Google Sheets :
+  1. Créer un Google Form avec ces champs (même ordre) :
+     - Nom complet (texte)
+     - Email (texte)
+     - Présence (choix : Oui / Non / Peut-être)
+     - Activités (cases : Pilates, Dîner samedi, Chasse au trésor, Souper samedi, Dimanche)
+     - Nombre d'accompagnants (texte)
+     - Allergies / régime (paragraphe)
+     - Message (paragraphe)
+  2. Dans l'onglet "Réponses" du Form, lier une feuille Google Sheets.
+  3. Récupérer l'URL d'envoi du formulaire (view-source du Form → chercher "formResponse")
+     et l'entry.XXXXX pour chaque champ.
+  4. Remplacer FORM_ACTION_URL et les name="entry.XXXXX" dans le <form> ci-dessous.
+-->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#ff4f8b" />
+  <title>Six anniversaires, un weekend — 29-30 août 2026</title>
+  <meta name="description" content="Invitation aux anniversaires d'Élie, Roman, Amandine, Gaëlle, Marc et Katia. 29 et 30 août 2026 à Corcelles." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Caveat:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="confetti" aria-hidden="true"></div>
+
+  <header class="card" id="invitation">
+    <p class="card-eyebrow">Vous êtes invité·e à</p>
+    <h1 class="card-title">
+      <span class="script">Six</span>
+      <span class="big">anniversaires</span>
+      <span class="script">un weekend</span>
+    </h1>
+
+    <p class="card-greeting">
+      Cher·ère <span id="guest-name">ami·e</span>,
+    </p>
+
+    <p class="card-lede">
+      Nous fêtons ensemble <strong>10, 20, 40, 50 et 80 ans</strong> —
+      une seule occasion, six personnes à célébrer, et vous au milieu.
+    </p>
+
+    <ul class="honorees" aria-label="Personnes fêtées">
+      <li><span class="age">10</span><span class="name">Élie</span></li>
+      <li><span class="age">20</span><span class="name">Roman</span></li>
+      <li><span class="age">40</span><span class="name">Amandine</span></li>
+      <li><span class="age">50</span><span class="name">Gaëlle</span></li>
+      <li><span class="age">80</span><span class="name">Marc</span></li>
+      <li><span class="age">80</span><span class="name">Katia</span></li>
+    </ul>
+
+    <dl class="card-facts">
+      <div>
+        <dt>Quand</dt>
+        <dd>Samedi 29 &amp; dimanche 30 août 2026</dd>
+      </div>
+      <div>
+        <dt>Où</dt>
+        <dd>
+          Chemin de Closel 3<br />
+          2035 Corcelles, Suisse
+          <a class="map-link" href="https://www.google.com/maps/search/?api=1&query=Chemin+de+Closel+3%2C+2035+Corcelles" target="_blank" rel="noopener">Voir sur la carte →</a>
+        </dd>
+      </div>
+      <div>
+        <dt>Dress code</dt>
+        <dd>Chic décontracté, couleurs vives bienvenues</dd>
+      </div>
+    </dl>
+
+    <a href="#rsvp" class="cta">Répondre à l'invitation</a>
+  </header>
+
+  <section class="program" id="programme" aria-labelledby="programme-title">
+    <h2 id="programme-title">Le programme</h2>
+    <p class="section-lede">Choisissez les moments où vous serez des nôtres — vous pourrez venir au complet ou juste pour l'après-midi.</p>
+
+    <ol class="timeline">
+      <li class="day-marker">
+        <h3>Samedi 29 août</h3>
+      </li>
+
+      <li class="slot" data-slot="pilates">
+        <div class="slot-time">10h00</div>
+        <div class="slot-body">
+          <h4>Pilates en plein air</h4>
+          <p>Séance douce pour réveiller les corps — tous niveaux, tapis fournis.</p>
+        </div>
+      </li>
+
+      <li class="slot" data-slot="diner">
+        <div class="slot-time">12h30</div>
+        <div class="slot-body">
+          <h4>Dîner</h4>
+          <p>Repas de midi convivial au jardin.</p>
+        </div>
+      </li>
+
+      <li class="slot" data-slot="chasse">
+        <div class="slot-time">15h00</div>
+        <div class="slot-body">
+          <h4>Chasse au trésor</h4>
+          <p>En équipes mélangées — de 7 à 87 ans. Pensez baskets.</p>
+        </div>
+      </li>
+
+      <li class="slot" data-slot="souper">
+        <div class="slot-time">19h30</div>
+        <div class="slot-body">
+          <h4>Souper &amp; discours</h4>
+          <p>Grande tablée, toasts aux six héros du weekend, musique jusqu'au bout de la nuit.</p>
+        </div>
+      </li>
+
+      <li class="day-marker">
+        <h3>Dimanche 30 août</h3>
+      </li>
+
+      <li class="slot" data-slot="dimanche">
+        <div class="slot-time">11h00</div>
+        <div class="slot-body">
+          <h4>Brunch &amp; au revoir</h4>
+          <p>Moment doux pour prolonger la fête avant les adieux.</p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <section class="rsvp" id="rsvp" aria-labelledby="rsvp-title">
+    <h2 id="rsvp-title">Votre réponse</h2>
+    <p class="section-lede">Merci de répondre avant le <strong>1er août 2026</strong>. Chaque activité demande une inscription pour qu'on prévoie la logistique.</p>
+
+    <form id="rsvp-form" action="FORM_ACTION_URL" method="POST" target="hidden-iframe" novalidate>
+      <div class="field">
+        <label for="fullname">Votre nom complet</label>
+        <input type="text" id="fullname" name="entry.FULLNAME" required autocomplete="name" />
+      </div>
+
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="entry.EMAIL" required autocomplete="email" />
+      </div>
+
+      <fieldset class="field" role="radiogroup" aria-labelledby="presence-legend">
+        <legend id="presence-legend">Serez-vous des nôtres ?</legend>
+        <div class="radios">
+          <label class="radio-card">
+            <input type="radio" name="entry.PRESENCE" value="Oui, le weekend complet" required />
+            <span>Oui, weekend complet</span>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="entry.PRESENCE" value="Oui, partiellement" />
+            <span>Oui, partiellement</span>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="entry.PRESENCE" value="Non, je ne peux pas" />
+            <span>Hélas non</span>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset class="field activities" aria-labelledby="activities-legend">
+        <legend id="activities-legend">À quelles activités participez-vous ?</legend>
+        <label class="check-card">
+          <input type="checkbox" name="entry.ACTIVITIES" value="Pilates samedi 10h" />
+          <span><strong>Pilates</strong><em>Sam. 10h00</em></span>
+        </label>
+        <label class="check-card">
+          <input type="checkbox" name="entry.ACTIVITIES" value="Dîner samedi 12h30" />
+          <span><strong>Dîner</strong><em>Sam. 12h30</em></span>
+        </label>
+        <label class="check-card">
+          <input type="checkbox" name="entry.ACTIVITIES" value="Chasse au trésor samedi 15h" />
+          <span><strong>Chasse au trésor</strong><em>Sam. 15h00</em></span>
+        </label>
+        <label class="check-card">
+          <input type="checkbox" name="entry.ACTIVITIES" value="Souper samedi 19h30" />
+          <span><strong>Souper</strong><em>Sam. 19h30</em></span>
+        </label>
+        <label class="check-card">
+          <input type="checkbox" name="entry.ACTIVITIES" value="Brunch dimanche 11h" />
+          <span><strong>Brunch</strong><em>Dim. 11h00</em></span>
+        </label>
+      </fieldset>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="guests">Accompagnants (vous inclus)</label>
+          <input type="number" id="guests" name="entry.GUESTS" min="1" max="10" value="1" />
+        </div>
+        <div class="field">
+          <label for="diet">Allergies ou régime</label>
+          <input type="text" id="diet" name="entry.DIET" placeholder="Aucune / végétarien / sans gluten…" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="message">Un petit mot pour les héros du weekend ?</label>
+        <textarea id="message" name="entry.MESSAGE" rows="3" placeholder="Optionnel"></textarea>
+      </div>
+
+      <input type="hidden" id="guest-link-name" name="entry.LINKNAME" value="" />
+
+      <button type="submit" class="cta">Envoyer ma réponse</button>
+      <p id="form-status" class="form-status" role="status" aria-live="polite"></p>
+    </form>
+
+    <iframe name="hidden-iframe" style="display:none" title="RSVP"></iframe>
+  </section>
+
+  <section class="info" aria-labelledby="info-title">
+    <h2 id="info-title">Infos pratiques</h2>
+    <div class="info-grid">
+      <article>
+        <h3>Se rendre à Corcelles</h3>
+        <p>En train : gare de Corcelles-Peseux (5 min à pied). En voiture : parking sur place possible mais limité — covoiturez si possible.</p>
+      </article>
+      <article>
+        <h3>Hébergement</h3>
+        <p>Plusieurs hôtels et B&amp;B à Neuchâtel (10 min en voiture). Faites-nous signe dans le message ci-dessus si vous cherchez un tuyau.</p>
+      </article>
+      <article>
+        <h3>Cadeaux</h3>
+        <p>Votre présence est le plus beau cadeau. Pour ceux qui insistent, une cagnotte commune sera communiquée.</p>
+      </article>
+      <article>
+        <h3>Une question ?</h3>
+        <p>Répondez dans le formulaire ou contactez-nous directement — on vous rappelle.</p>
+      </article>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p>Fait avec ♥ pour Élie, Roman, Amandine, Gaëlle, Marc &amp; Katia.</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
