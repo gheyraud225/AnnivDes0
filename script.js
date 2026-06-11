@@ -64,6 +64,47 @@
   activities.addEventListener("change", syncActivitiesSummary);
   syncActivitiesState();
 
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const burstConfetti = () => {
+    if (reducedMotion) return;
+    const colors = ["#ff4f8b", "#ff8a5b", "#ffd14f", "#3ecfcf", "#7a5cff"];
+    const burst = document.createElement("div");
+    burst.className = "confetti-burst";
+    burst.setAttribute("aria-hidden", "true");
+    for (let i = 0; i < 36; i++) {
+      const piece = document.createElement("i");
+      piece.style.setProperty("--x", Math.random() * 100 + "vw");
+      piece.style.setProperty("--delay", Math.random() * 0.4 + "s");
+      piece.style.setProperty("--fall", 2 + Math.random() * 1.5 + "s");
+      piece.style.setProperty("--spin", (Math.random() < 0.5 ? -1 : 1) * (360 + Math.random() * 360) + "deg");
+      piece.style.setProperty("--size", 6 + Math.random() * 7 + "px");
+      piece.style.background = colors[i % colors.length];
+      if (i % 3 === 0) piece.style.borderRadius = "50%";
+      burst.appendChild(piece);
+    }
+    document.body.appendChild(burst);
+    setTimeout(() => burst.remove(), 4500);
+  };
+
+  let toastTimer;
+  const showToast = (title, text) => {
+    let toast = document.getElementById("rsvp-toast");
+    if (!toast) {
+      toast = document.createElement("div");
+      toast.id = "rsvp-toast";
+      toast.className = "toast";
+      toast.setAttribute("role", "status");
+      toast.innerHTML = '<span class="toast-emoji" aria-hidden="true">🎉</span><div><strong></strong><p></p></div>';
+      document.body.appendChild(toast);
+    }
+    toast.querySelector("strong").textContent = title;
+    toast.querySelector("p").textContent = text;
+    requestAnimationFrame(() => toast.classList.add("visible"));
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove("visible"), 6000);
+  };
+
   form.addEventListener("submit", (event) => {
     if (!form.checkValidity()) {
       event.preventDefault();
@@ -75,13 +116,22 @@
 
     syncActivitiesSummary();
 
+    const submitButton = form.querySelector('button[type="submit"]');
+    const firstName = (document.getElementById("fullname").value.trim().split(/\s+/)[0]) || "";
+
     status.className = "form-status";
     status.textContent = "Envoi en cours…";
+    submitButton.disabled = true;
 
     setTimeout(() => {
       status.className = "form-status success";
-      status.textContent =
-        "Merci, votre réponse est bien arrivée ! On a hâte de vous voir.";
+      status.textContent = "Réponse envoyée ✓";
+      submitButton.disabled = false;
+      showToast(
+        firstName ? "Merci " + firstName + " !" : "Merci !",
+        "Votre réponse est bien partie. On a hâte de vous voir le 29 août !"
+      );
+      burstConfetti();
       form.reset();
       syncActivitiesState();
       if (cleanName) {

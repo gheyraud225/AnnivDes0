@@ -250,6 +250,12 @@ p { margin: 0 0 0.6rem; }
 
 .cta:active { transform: translateY(0); }
 
+.cta:disabled {
+  opacity: 0.6;
+  cursor: wait;
+  transform: none;
+}
+
 .section-lede {
   color: var(--ink-soft);
   max-width: 55ch;
@@ -363,10 +369,10 @@ p { margin: 0 0 0.6rem; }
 }
 
 .field input[type="text"],
-.field input[type="email"],
 .field input[type="number"],
 .field textarea {
   font: inherit;
+  font-size: 16px; /* ≥16px : évite le zoom automatique d'iOS au focus */
   padding: 0.8rem 0.9rem;
   border: 2px solid #ecdfd0;
   border-radius: 12px;
@@ -418,9 +424,21 @@ fieldset.field {
 .radio-card input,
 .check-card input {
   accent-color: var(--pink);
-  width: 1.1rem;
-  height: 1.1rem;
+  width: 1.25rem;
+  height: 1.25rem;
   flex-shrink: 0;
+}
+
+.radio-card,
+.check-card,
+.cta,
+.map-link {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.radio-card,
+.check-card {
+  min-height: 48px;
 }
 
 .radio-card:has(input:checked),
@@ -459,6 +477,72 @@ fieldset.field {
 
 .form-status.success { color: #0b8a5a; }
 .form-status.error { color: #c0392b; }
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  transform: translate(-50%, calc(100% + 2rem));
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  width: min(92vw, 420px);
+  padding: 1rem 1.2rem;
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: 16px;
+  box-shadow: 0 18px 40px -12px rgba(34, 34, 59, 0.5);
+  z-index: 50;
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.35s ease;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.toast.visible {
+  transform: translate(-50%, 0);
+  opacity: 1;
+}
+
+.toast-emoji {
+  font-size: 1.8rem;
+  flex-shrink: 0;
+}
+
+.toast strong {
+  display: block;
+  font-size: 1.05rem;
+}
+
+.toast p {
+  margin: 0.1rem 0 0;
+  font-size: 0.9rem;
+  opacity: 0.85;
+  line-height: 1.35;
+}
+
+.confetti-burst {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 49;
+  overflow: hidden;
+}
+
+.confetti-burst i {
+  position: absolute;
+  top: -3vh;
+  left: var(--x);
+  width: var(--size);
+  height: calc(var(--size) * 1.6);
+  animation: confetti-fall var(--fall) ease-in var(--delay) forwards;
+  opacity: 0;
+}
+
+@keyframes confetti-fall {
+  0% { opacity: 1; transform: translateY(0) rotate(0deg); }
+  90% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(105vh) rotate(var(--spin)); }
+}
 
 .info-grid {
   display: grid;
@@ -536,6 +620,7 @@ fieldset.field {
 
 @media (prefers-reduced-motion: reduce) {
   .confetti { animation: none; }
+  .confetti-burst { display: none; }
   html { scroll-behavior: auto; }
   * { transition: none !important; }
 }
