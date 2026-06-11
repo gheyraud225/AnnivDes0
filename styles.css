@@ -329,10 +329,8 @@ p { margin: 0 0 0.6rem; }
 }
 
 .slot[data-slot="pilates"] .slot-time { background: linear-gradient(135deg, #d9f6f4, var(--turquoise)); }
-.slot[data-slot="diner"] .slot-time { background: linear-gradient(135deg, #fff1d6, var(--yellow)); }
-.slot[data-slot="chasse"] .slot-time { background: linear-gradient(135deg, #ffe3ec, var(--pink)); color: white; }
-.slot[data-slot="souper"] .slot-time { background: linear-gradient(135deg, #e8e0ff, var(--violet)); color: white; }
-.slot[data-slot="dimanche"] .slot-time { background: linear-gradient(135deg, #ffd9cc, var(--coral)); color: white; }
+.slot[data-slot="poterie-matin"] .slot-time { background: linear-gradient(135deg, #ffe3ec, var(--pink)); color: white; }
+.slot[data-slot="poterie-aprem"] .slot-time { background: linear-gradient(135deg, #e8e0ff, var(--violet)); color: white; }
 
 .slot-body { flex: 1; min-width: 0; }
 
@@ -530,7 +528,6 @@ fieldset.field {
   .field-row { grid-template-columns: 1fr 1fr; }
   .info-grid { grid-template-columns: 1fr 1fr; }
   .card-facts { grid-template-columns: 1fr 1fr; }
-  .card-facts > div:first-child { grid-column: 1 / -1; }
 }
 
 @media (min-width: 900px) {
