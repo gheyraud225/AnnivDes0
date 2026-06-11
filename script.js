@@ -51,7 +51,13 @@
   syncActivitiesState();
 
   form.addEventListener("submit", (event) => {
-    if (!form.checkValidity()) return;
+    if (!form.checkValidity()) {
+      event.preventDefault();
+      form.reportValidity();
+      status.className = "form-status error";
+      status.textContent = "Merci de remplir les champs obligatoires avant d'envoyer.";
+      return;
+    }
 
     status.className = "form-status";
     status.textContent = "Envoi en cours…";
