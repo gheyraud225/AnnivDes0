@@ -7,6 +7,11 @@
 
   RSVP : connecté au Google Form 1FAIpQLSduiFz6WBdr_oS1XUm6zpQBhO17O_heW_EwURT70vqjDxxuvQ
   (voir action du <form> ci-dessous).
+
+  Activités : les cases cochées sont concaténées en une seule chaîne de texte
+  envoyée dans la question "Activités" du Form (entry.1373291749), qui doit
+  être de type "Réponse courte" ou "Paragraphe". On peut donc ajouter ou
+  modifier des activités ici sans toucher au Google Form.
 -->
 <!DOCTYPE html>
 <html lang="fr">
@@ -136,18 +141,24 @@
 
       <fieldset class="field activities" aria-labelledby="activities-legend">
         <legend id="activities-legend">À quelles activités participez-vous ?</legend>
+        <!--
+          Les cases ne sont pas envoyées telles quelles : le script les
+          concatène dans le champ caché ci-dessous (question texte du Form).
+          On peut donc changer les activités ici sans modifier le Google Form.
+        -->
         <label class="check-card">
-          <input type="checkbox" name="entry.1373291749" value="Pilates" />
+          <input type="checkbox" class="activity-choice" value="Pilates (9h00)" />
           <span><strong>Pilates</strong><em>9h00</em></span>
         </label>
         <label class="check-card">
-          <input type="checkbox" name="entry.1373291749" value="Poterie 11h" />
+          <input type="checkbox" class="activity-choice" value="Poterie (11h00)" />
           <span><strong>Poterie</strong><em>11h00</em></span>
         </label>
         <label class="check-card">
-          <input type="checkbox" name="entry.1373291749" value="Poterie 14h" />
+          <input type="checkbox" class="activity-choice" value="Poterie (14h00)" />
           <span><strong>Poterie</strong><em>14h00</em></span>
         </label>
+        <input type="hidden" id="activities-summary" name="entry.1373291749" value="Aucune activité cochée" />
       </fieldset>
 
       <div class="field-row">

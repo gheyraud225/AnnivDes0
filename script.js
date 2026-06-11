@@ -34,6 +34,18 @@
   const PRESENCE_NAME = "entry.455410023";
   const presenceRadios = form.querySelectorAll('input[name="' + PRESENCE_NAME + '"]');
   const activities = form.querySelector(".activities");
+  const activitiesSummary = document.getElementById("activities-summary");
+
+  // Toutes les activités cochées partent dans une seule question texte
+  // du Google Form : on peut changer la liste côté site librement.
+  const syncActivitiesSummary = () => {
+    const checked = Array.from(
+      activities.querySelectorAll(".activity-choice:checked")
+    ).map((cb) => cb.value);
+    activitiesSummary.value = checked.length
+      ? checked.join(", ")
+      : "Aucune activité cochée";
+  };
 
   const syncActivitiesState = () => {
     const selected = form.querySelector('input[name="' + PRESENCE_NAME + '"]:checked');
@@ -45,9 +57,11 @@
         if (disabled) cb.checked = false;
       });
     activities.style.opacity = disabled ? 0.5 : 1;
+    syncActivitiesSummary();
   };
 
   presenceRadios.forEach((r) => r.addEventListener("change", syncActivitiesState));
+  activities.addEventListener("change", syncActivitiesSummary);
   syncActivitiesState();
 
   form.addEventListener("submit", (event) => {
@@ -58,6 +72,8 @@
       status.textContent = "Merci de remplir les champs obligatoires avant d'envoyer.";
       return;
     }
+
+    syncActivitiesSummary();
 
     status.className = "form-status";
     status.textContent = "Envoi en cours…";
