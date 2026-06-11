@@ -156,15 +156,19 @@
         <input type="hidden" id="activities-summary" name="entry.1373291749" value="Aucune activité cochée" />
       </fieldset>
 
-      <div class="field-row">
-        <div class="field">
-          <label for="guests">Accompagnants (vous inclus)</label>
-          <input type="number" id="guests" name="entry.1430696633" min="1" max="10" value="1" />
-        </div>
-        <div class="field">
-          <label for="diet">Allergies ou régime</label>
-          <input type="text" id="diet" name="entry.1862615726" placeholder="Aucune / végétarien / sans gluten…" />
-        </div>
+      <fieldset class="field companions" aria-labelledby="companions-legend">
+        <legend id="companions-legend">Vous venez accompagné·e ?</legend>
+        <ul id="companions-list" class="companions-list" aria-live="polite"></ul>
+        <p id="companions-empty" class="companions-empty">Aucun accompagnant pour l'instant.</p>
+        <button type="button" id="add-companion" class="add-companion">
+          <span aria-hidden="true">＋</span> Ajouter une personne
+        </button>
+        <input type="hidden" id="guests" name="entry.1430696633" value="" />
+      </fieldset>
+
+      <div class="field">
+        <label for="diet">Allergies ou régime</label>
+        <input type="text" id="diet" name="entry.1862615726" placeholder="Aucune / végétarien / sans gluten…" />
       </div>
 
       <div class="field">
@@ -177,6 +181,32 @@
     </form>
 
     <iframe name="hidden-iframe" style="display:none" title="RSVP"></iframe>
+
+    <dialog id="companion-dialog" class="companion-dialog" aria-labelledby="companion-dialog-title">
+      <form method="dialog" id="companion-form" class="companion-form">
+        <header class="companion-dialog-header">
+          <h3 id="companion-dialog-title">Qui vous accompagne ?</h3>
+          <button type="button" class="companion-dialog-close" id="companion-cancel" aria-label="Annuler">×</button>
+        </header>
+
+        <div class="companion-dialog-body">
+          <div class="field">
+            <label for="companion-name">Prénom et nom</label>
+            <input type="text" id="companion-name" autocomplete="off" required maxlength="60" placeholder="ex. Sophie Dupont" />
+          </div>
+
+          <fieldset class="field" aria-labelledby="companion-activities-legend">
+            <legend id="companion-activities-legend">À quelles activités participe-t-il·elle ?</legend>
+            <div id="companion-activities" class="activities companion-activities"></div>
+          </fieldset>
+        </div>
+
+        <footer class="companion-dialog-footer">
+          <button type="button" class="cta cta--ghost" id="companion-cancel-btn">Annuler</button>
+          <button type="submit" class="cta" id="companion-add-btn">Ajouter</button>
+        </footer>
+      </form>
+    </dialog>
   </section>
 
   <section class="info" aria-labelledby="info-title">
