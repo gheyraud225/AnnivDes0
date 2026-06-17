@@ -606,6 +606,67 @@ fieldset.field {
 .rsvp .section-lede { margin-left: auto; margin-right: auto; }
 #rsvp-form { text-align: left; }
 
+.rsvp-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem 1.2rem;
+  margin: 0 0 1rem;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  padding: 0.5rem 0.4rem;
+  font: inherit;
+  font-size: 0.92rem;
+  color: var(--violet);
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.link-button:hover,
+.link-button:focus-visible {
+  color: var(--pink);
+  outline: none;
+}
+
+.field-hint {
+  margin: 0.1rem 0 0;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  line-height: 1.35;
+}
+
+.auth-intro {
+  margin: 0 0 0.4rem;
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.auth-step #auth-resend {
+  margin-top: 0.5rem;
+  padding-left: 0;
+}
+
+.welcome-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: linear-gradient(135deg, #fff1d6, #ffe3ec);
+  border-radius: 14px;
+  padding: 0.7rem 0.9rem;
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+
+.welcome-banner-emoji { font-size: 1.3rem; }
+
 /* ---------- Accompagnants ---------- */
 
 .companions {

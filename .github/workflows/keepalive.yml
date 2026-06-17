@@ -1,0 +1,46 @@
+# Empêche la mise en pause du projet Supabase gratuit (inactivité 7 jours)
+# en pingant l'API REST tous les 3 jours.
+#
+# Prérequis : créer deux secrets de repo (Settings > Secrets > Actions) :
+#   - SUPABASE_URL                  (ex: https://xxxxxxxxxxxxxxxx.supabase.co)
+#   - SUPABASE_PUBLISHABLE_KEY      (clé "anon" / "publishable")
+
+name: Supabase keepalive
+
+on:
+  schedule:
+    - cron: "0 9 */3 * *"  # tous les 3 jours à 09:00 UTC
+  workflow_dispatch:        # bouton "Run workflow" manuel
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hit Supabase REST endpoint
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_KEY" ]; then
+            echo "::error::SUPABASE_URL et SUPABASE_PUBLISHABLE_KEY doivent être configurés en secrets."
+            exit 1
+          fi
+
+          # HEAD sur la table rsvps (range vide) — coût quasi nul, mais ça
+          # touche l'API REST et la base, ce qui réveille le projet.
+          status=$(curl --silent --show-error --output /dev/null --write-out "%{http_code}" \
+            --max-time 30 \
+            -H "apikey: $SUPABASE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_KEY" \
+            -H "Range: 0-0" \
+            "$SUPABASE_URL/rest/v1/rsvps?select=id")
+
+          echo "Réponse: HTTP $status"
+
+          # 200 = OK ; 206 = Partial Content (range) aussi OK ; 401/403
+          # peuvent arriver mais signifient quand même que l'API répond
+          # — ce qui suffit pour le keepalive.
+          if [ "$status" -ge 500 ]; then
+            echo "::error::Supabase a répondu avec un statut serveur ($status)."
+            exit 1
+          fi

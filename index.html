@@ -5,13 +5,11 @@
   Personnaliser le lien par invité : ?nom=Prenom
   Exemple : https://monsite.ch/?nom=Marie
 
-  RSVP : connecté au Google Form 1FAIpQLSduiFz6WBdr_oS1XUm6zpQBhO17O_heW_EwURT70vqjDxxuvQ
-  (voir action du <form> ci-dessous).
-
-  Activités : les cases cochées sont concaténées en une seule chaîne de texte
-  envoyée dans la question "Activités" du Form (entry.1373291749), qui doit
-  être de type "Réponse courte" ou "Paragraphe". On peut donc ajouter ou
-  modifier des activités ici sans toucher au Google Form.
+  RSVP : stocké dans Supabase (table public.rsvps, voir supabase/schema.sql).
+  Auth : code OTP à 6 chiffres par email. Chaque invité peut revenir
+  modifier sa réponse depuis n'importe quel appareil.
+  Config : URL + clé publishable dans config.js (clés sûres côté client
+  tant que la RLS est active).
 -->
 <!DOCTYPE html>
 <html lang="fr">
@@ -112,23 +110,34 @@
   <section class="rsvp" id="rsvp" aria-labelledby="rsvp-title">
     <img class="card-artwork card-artwork--koi" src="images/koi.png" alt="" aria-hidden="true" loading="lazy" />
     <h2 id="rsvp-title">Votre réponse</h2>
-    <p class="section-lede">Merci de répondre avant le <strong>1er août 2026</strong>. Chaque activité demande une inscription pour qu'on prévoie la logistique.</p>
+    <p class="section-lede">Merci de répondre avant le <strong>1er août 2026</strong>. Vous pourrez revenir modifier votre réponse à tout moment depuis n'importe quel appareil.</p>
 
-    <form id="rsvp-form" action="https://docs.google.com/forms/d/e/1FAIpQLSduiFz6WBdr_oS1XUm6zpQBhO17O_heW_EwURT70vqjDxxuvQ/formResponse" method="POST" target="hidden-iframe" novalidate>
+    <div class="rsvp-toolbar">
+      <button type="button" id="open-modify" class="link-button">Modifier une réponse déjà envoyée</button>
+      <button type="button" id="sign-out" class="link-button" hidden>Se déconnecter</button>
+    </div>
+
+    <form id="rsvp-form">
       <div class="field">
         <label for="fullname">Votre nom complet</label>
-        <input type="text" id="fullname" name="entry.345983301" required autocomplete="name" />
+        <input type="text" id="fullname" required autocomplete="name" maxlength="80" />
+      </div>
+
+      <div class="field">
+        <label for="email">Votre email</label>
+        <input type="email" id="email" required autocomplete="email" inputmode="email" maxlength="120" placeholder="prenom@exemple.ch" />
+        <p class="field-hint">Un code à 6 chiffres vous sera envoyé pour confirmer votre réponse. Vous pourrez revenir avec ce même email pour la modifier.</p>
       </div>
 
       <fieldset class="field" role="radiogroup" aria-labelledby="presence-legend">
         <legend id="presence-legend">Serez-vous des nôtres ?</legend>
         <div class="radios">
           <label class="radio-card">
-            <input type="radio" name="entry.455410023" value="Oui" required />
+            <input type="radio" name="presence" value="oui" required />
             <span>Oui</span>
           </label>
           <label class="radio-card">
-            <input type="radio" name="entry.455410023" value="Non" />
+            <input type="radio" name="presence" value="non" />
             <span>Hélas non</span>
           </label>
         </div>
@@ -136,11 +145,6 @@
 
       <fieldset class="field activities" aria-labelledby="activities-legend">
         <legend id="activities-legend">À quelles activités participez-vous ?</legend>
-        <!--
-          Les cases ne sont pas envoyées telles quelles : le script les
-          concatène dans le champ caché ci-dessous (question texte du Form).
-          On peut donc changer les activités ici sans modifier le Google Form.
-        -->
         <label class="check-card">
           <input type="checkbox" class="activity-choice" value="Pilates (9h00)" />
           <span><strong>Pilates</strong><em>9h00</em></span>
@@ -153,7 +157,6 @@
           <input type="checkbox" class="activity-choice" value="Poterie (14h00)" />
           <span><strong>Poterie</strong><em>14h00</em></span>
         </label>
-        <input type="hidden" id="activities-summary" name="entry.1373291749" value="Aucune activité cochée" />
       </fieldset>
 
       <fieldset class="field companions" aria-labelledby="companions-legend">
@@ -163,24 +166,62 @@
         <button type="button" id="add-companion" class="add-companion">
           <span aria-hidden="true">＋</span> Ajouter une personne
         </button>
-        <input type="hidden" id="guests" name="entry.1430696633" value="" />
       </fieldset>
 
       <div class="field">
         <label for="diet">Allergies ou régime</label>
-        <input type="text" id="diet" name="entry.1862615726" placeholder="Aucune / végétarien / sans gluten…" />
+        <input type="text" id="diet" placeholder="Aucune / végétarien / sans gluten…" maxlength="200" />
       </div>
 
       <div class="field">
         <label for="message">Un petit mot pour les héros du jour ?</label>
-        <textarea id="message" name="entry.250600536" rows="3" placeholder="Optionnel"></textarea>
+        <textarea id="message" rows="3" placeholder="Optionnel" maxlength="1000"></textarea>
       </div>
 
-      <button type="submit" class="cta">Envoyer ma réponse</button>
+      <button type="submit" class="cta" id="rsvp-submit">Envoyer ma réponse</button>
       <p id="form-status" class="form-status" role="status" aria-live="polite"></p>
     </form>
 
-    <iframe name="hidden-iframe" style="display:none" title="RSVP"></iframe>
+    <dialog id="auth-dialog" class="companion-dialog auth-dialog" aria-labelledby="auth-dialog-title">
+      <form method="dialog" id="auth-form" class="companion-form">
+        <header class="companion-dialog-header">
+          <h3 id="auth-dialog-title">Vérifions votre email</h3>
+          <button type="button" class="companion-dialog-close" id="auth-close" aria-label="Fermer">×</button>
+        </header>
+
+        <div class="companion-dialog-body">
+          <!-- Étape 1 : saisie de l'email -->
+          <div id="auth-step-email" class="auth-step">
+            <p class="auth-intro" id="auth-intro-email">
+              On vous envoie un code à 6 chiffres pour confirmer votre réponse.
+            </p>
+            <div class="field">
+              <label for="auth-email">Email</label>
+              <input type="email" id="auth-email" autocomplete="email" inputmode="email" required maxlength="120" placeholder="prenom@exemple.ch" />
+            </div>
+          </div>
+
+          <!-- Étape 2 : saisie du code OTP -->
+          <div id="auth-step-code" class="auth-step" hidden>
+            <p class="auth-intro">
+              Un code à 6 chiffres a été envoyé à <strong id="auth-email-display"></strong>. Vérifiez aussi vos spams.
+            </p>
+            <div class="field">
+              <label for="auth-code">Code reçu</label>
+              <input type="text" id="auth-code" inputmode="numeric" autocomplete="one-time-code" pattern="\d{6}" maxlength="6" placeholder="123456" />
+            </div>
+            <button type="button" id="auth-resend" class="link-button">Renvoyer le code</button>
+          </div>
+
+          <p id="auth-status" class="form-status" role="status" aria-live="polite"></p>
+        </div>
+
+        <footer class="companion-dialog-footer">
+          <button type="button" class="cta cta--ghost" id="auth-cancel">Annuler</button>
+          <button type="submit" class="cta" id="auth-submit">Envoyer le code</button>
+        </footer>
+      </form>
+    </dialog>
 
     <dialog id="companion-dialog" class="companion-dialog" aria-labelledby="companion-dialog-title">
       <form method="dialog" id="companion-form" class="companion-form">
@@ -227,6 +268,6 @@
     <p>Fait avec ♥ pour Ellie, Roman, Amandine, Gaëlle, Marc &amp; Katia.</p>
   </footer>
 
-  <script src="script.js"></script>
+  <script type="module" src="script.js"></script>
 </body>
 </html>
