@@ -18,28 +18,68 @@ email. Suis les étapes ci-dessous une seule fois.
 
 ## 3. Configurer l'auth par OTP (code à 6 chiffres)
 
-Par défaut, Supabase envoie un **lien magique** au lieu d'un code. On veut un code.
+Par défaut, Supabase envoie un **lien magique** au lieu d'un code, et son service
+email gratuit n'envoie qu'à ton organisation. Il faut donc un SMTP custom, puis
+ajuster le template. C'est l'étape la plus importante.
 
-1. Dans le dashboard, va dans **Authentication → Providers → Email** : vérifie qu'**Email** est activé. Désactive *Confirm email* si tu veux que les nouveaux invités n'aient pas à cliquer sur un lien d'activation.
-2. Va dans **Authentication → Email Templates → Magic Link**.
-3. Dans le corps du mail, **remplace `{{ .ConfirmationURL }}` par `{{ .Token }}`**. Exemple de template suggéré :
+### 3.a — Brancher un SMTP custom (OBLIGATOIRE)
 
+> ⚠️ Depuis septembre 2024, le service email **par défaut** de Supabase :
+> - **n'envoie qu'aux adresses membres de ton organisation Supabase** (tes
+>   invités ne recevraient donc jamais le mail), et
+> - **interdit d'éditer les templates** (donc impossible d'afficher un code
+>   à 6 chiffres `{{ .Token }}`).
+>
+> Il faut donc impérativement configurer ton propre SMTP. Le plus simple
+> quand on a un Gmail et un faible volume (quelques dizaines d'invités) :
+> utiliser le SMTP de Gmail. Alternatives sans domaine : Brevo (300/j gratuit,
+> vérif d'un simple expéditeur) ou SendGrid (100/j, single sender). Avec un
+> domaine à toi : Resend.
+
+**Option Gmail (recommandée ici) :**
+
+1. Sur ton compte Google : **Compte Google → Sécurité → Validation en 2 étapes**
+   doit être **activée** (obligatoire pour générer un mot de passe d'application).
+2. Toujours dans Sécurité, ouvre **Mots de passe des applications**, crée-en un
+   (nom libre, ex. « Supabase ») et copie le mot de passe à 16 caractères.
+3. Dans Supabase : **Authentication → Emails → SMTP Settings** (ou le bouton
+   **Set up SMTP**), active *Enable Custom SMTP* et renseigne :
+   - **Sender email** : ton adresse Gmail (ex. `mayorr27@gmail.com`)
+   - **Sender name** : ex. `Anniversaires Corcelles`
+   - **Host** : `smtp.gmail.com`
+   - **Port** : `465`
+   - **Username** : ton adresse Gmail complète
+   - **Password** : le mot de passe d'application à 16 caractères (PAS ton mot de passe Gmail habituel)
+4. Enregistre. L'édition des templates est maintenant débloquée.
+
+### 3.b — Mettre le code à 6 chiffres dans le template
+
+1. Va dans **Authentication → Emails → Templates → « Magic link or OTP »**.
+2. Onglet **Source** du corps, **remplace tout le contenu** (qui contient
+   actuellement un lien `{{ .ConfirmationURL }}`) par un code `{{ .Token }}`.
+   Exemple :
+
+   ```html
+   <h2>Votre code de connexion</h2>
+   <p>Voici votre code pour confirmer votre réponse à l'invitation du 29 août :</p>
+   <p style="font-size:28px;font-weight:bold;letter-spacing:4px">{{ .Token }}</p>
+   <p>Ce code est valable 1 heure. Si vous n'êtes pas à l'origine de cette
+   demande, vous pouvez ignorer ce message.</p>
    ```
-   Bonjour,
 
-   Voici votre code de connexion pour l'invitation du 29 août :
+   Tu peux aussi adapter le **Subject**, ex. `Votre code pour l'invitation`.
 
-   {{ .Token }}
+   > ⚠️ Tant que le template contient `{{ .ConfirmationURL }}`, Supabase envoie
+   > un lien magique au lieu d'un code, et le site ne pourra pas valider l'OTP.
 
-   Ce code est valable 1 heure. Si vous n'êtes pas à l'origine de cette
-   demande, vous pouvez ignorer ce message.
-   ```
+3. **Authentication → Sign In / Providers → Email** : vérifie qu'**Email** est
+   activé et **désactive « Confirm email »**. Ainsi, un nouvel invité reçoit
+   directement le code (sinon Supabase envoie d'abord un mail « Confirm signup »
+   séparé pour les premières réponses).
 
-   > ⚠️ Tant que le template contient `{{ .ConfirmationURL }}`, Supabase envoie un lien magique — l'OTP ne marchera pas.
-
-4. Va dans **Authentication → URL Configuration** :
-   - **Site URL** : mets ton URL GitHub Pages, par exemple `https://gheyraud225.github.io/AnnivDes0/`.
-   - **Redirect URLs** : ajoute aussi la même URL (ça ne sert pas pour l'OTP, mais évite les warnings).
+4. **Authentication → URL Configuration** :
+   - **Site URL** : ton URL GitHub Pages, ex. `https://gheyraud225.github.io/AnnivDes0/`.
+   - **Redirect URLs** : ajoute la même URL (ça ne sert pas pour l'OTP, mais évite les warnings).
 
 ## 4. Renseigner les clés dans le site
 
@@ -61,8 +101,13 @@ Par défaut, Supabase envoie un **lien magique** au lieu d'un code. On veut un c
 Sur ton téléphone ou en navigation privée :
 
 1. Ouvre l'URL GitHub Pages.
-2. Remplis le formulaire avec ton vrai email, clique **Envoyer ma réponse**.
+2. Remplis le formulaire avec un email **différent** de ton compte Supabase
+   (pour vérifier que le SMTP envoie bien à n'importe qui), clique **Envoyer ma réponse**.
 3. Tu devrais recevoir un mail avec un code à 6 chiffres → entre-le dans la fenêtre.
+   - Si tu reçois un **lien** au lieu d'un code → le template contient encore
+     `{{ .ConfirmationURL }}` (revois l'étape 3.b).
+   - Si tu ne reçois **rien** → le SMTP n'est pas (bien) configuré, regarde
+     **Authentication → Emails → Logs** dans Supabase, et tes spams.
 4. Confettis + toast → la ligne apparaît dans **Database → rsvps**.
 5. Reviens plus tard sur un autre appareil → clique **Modifier une réponse déjà envoyée** → entre le même email → code → le formulaire est prérempli avec ta réponse précédente.
 
