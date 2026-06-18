@@ -336,7 +336,9 @@ p { margin: 0 0 0.6rem; }
 
 .slot[data-slot="pilates"] .slot-time { background: linear-gradient(135deg, #d9f6f4, var(--turquoise)); }
 .slot[data-slot="poterie-matin"] .slot-time { background: linear-gradient(135deg, #ffe3ec, var(--pink)); color: white; }
+.slot[data-slot="repas-midi"] .slot-time { background: linear-gradient(135deg, #fff1d6, var(--yellow)); }
 .slot[data-slot="poterie-aprem"] .slot-time { background: linear-gradient(135deg, #e8e0ff, var(--violet)); color: white; }
+.slot[data-slot="repas-soir"] .slot-time { background: linear-gradient(135deg, #ffd9cc, var(--coral)); color: white; }
 
 .slot-body { flex: 1; min-width: 0; }
 

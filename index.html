@@ -98,11 +98,27 @@
         </div>
       </li>
 
+      <li class="slot" data-slot="repas-midi">
+        <div class="slot-time">12h30</div>
+        <div class="slot-body">
+          <h4>Repas du midi</h4>
+          <p>Pause déjeuner conviviale entre les deux ateliers.</p>
+        </div>
+      </li>
+
       <li class="slot" data-slot="poterie-aprem">
         <div class="slot-time">14h00</div>
         <div class="slot-body">
           <h4>Atelier poterie</h4>
           <p>Deuxième session pour ceux qui ont raté la première — ou qui en redemandent.</p>
+        </div>
+      </li>
+
+      <li class="slot" data-slot="repas-soir">
+        <div class="slot-time">19h30</div>
+        <div class="slot-body">
+          <h4>Repas du soir</h4>
+          <p>Grande tablée pour célébrer les six héros de la journée.</p>
         </div>
       </li>
     </ol>
@@ -111,7 +127,7 @@
   <section class="rsvp" id="rsvp" aria-labelledby="rsvp-title">
     <img class="card-artwork card-artwork--koi" src="images/koi.png" alt="" aria-hidden="true" loading="lazy" />
     <h2 id="rsvp-title">Votre réponse</h2>
-    <p class="section-lede">Merci de répondre avant le <strong>1er août 2026</strong>. Vous pourrez revenir modifier votre réponse à tout moment depuis n'importe quel appareil.</p>
+    <p class="section-lede">Merci de répondre avant le <strong>20 juin 2026</strong>. Vous pourrez revenir modifier votre réponse à tout moment depuis n'importe quel appareil.</p>
 
     <!-- Bloc auth visible tant que l'invité n'est pas connecté -->
     <div id="auth-block" class="auth-block">
@@ -174,8 +190,16 @@
             <span><strong>Poterie</strong><em>11h00</em></span>
           </label>
           <label class="check-card">
+            <input type="checkbox" class="activity-choice" value="Repas du midi (12h30)" />
+            <span><strong>Repas du midi</strong><em>12h30</em></span>
+          </label>
+          <label class="check-card">
             <input type="checkbox" class="activity-choice" value="Poterie (14h00)" />
             <span><strong>Poterie</strong><em>14h00</em></span>
+          </label>
+          <label class="check-card">
+            <input type="checkbox" class="activity-choice" value="Repas du soir (19h30)" />
+            <span><strong>Repas du soir</strong><em>19h30</em></span>
           </label>
         </fieldset>
 
