@@ -19,6 +19,14 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   },
 });
 
+// config.js encore sur les valeurs d'exemple ? On le détecte pour afficher
+// un message clair plutôt qu'une erreur réseau obscure.
+const IS_CONFIGURED =
+  !!SUPABASE_URL &&
+  !!SUPABASE_PUBLISHABLE_KEY &&
+  !/VOTRE-PROJET/i.test(SUPABASE_URL) &&
+  !/VOTRE_CLE/i.test(SUPABASE_PUBLISHABLE_KEY);
+
 // ---------- helpers ---------------------------------------------------
 
 const $ = (id) => document.getElementById(id);
@@ -368,6 +376,11 @@ const lockAuthForm = (lock) => {
 };
 
 const handleAuth = async (mode) => {
+  if (!IS_CONFIGURED) {
+    setStatus(authStatus, "error",
+      "Le site n'est pas encore relié à Supabase : renseignez SUPABASE_URL et la clé dans config.js.");
+    return;
+  }
   const email = normalizeEmail(authEmail.value);
   const password = authPassword.value;
 
@@ -501,6 +514,12 @@ form.addEventListener("submit", async (event) => {
 // ---------- initialisation -------------------------------------------
 
 const init = async () => {
+  if (!IS_CONFIGURED) {
+    showAuth();
+    setStatus(authStatus, "error",
+      "Le site n'est pas encore relié à Supabase : renseignez SUPABASE_URL et la clé dans config.js.");
+    return;
+  }
   try {
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
