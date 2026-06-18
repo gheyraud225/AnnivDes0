@@ -7,5 +7,5 @@
 // Remplacer les deux valeurs ci-dessous par celles de ton projet Supabase :
 // Dashboard > Project Settings > API.
 
-export const SUPABASE_URL = "https://VOTRE-PROJET.supabase.co";
-export const SUPABASE_PUBLISHABLE_KEY = "VOTRE_CLE_PUBLISHABLE_ICI";
+export const SUPABASE_URL = "https://tgfzxruwpdqrmeztpbwd.supabase.co";
+export const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_ioEkJ72noygqTuNMl4zZig_yrRT9gLL";
