@@ -1,8 +1,10 @@
 # Mise en route — Supabase
 
 Ce site est statique (GitHub Pages) mais il enregistre les RSVP dans une base
-Supabase. La connexion des invités se fait par un code à 6 chiffres envoyé par
-email. Suis les étapes ci-dessous une seule fois.
+Supabase. La connexion des invités se fait par **email + mot de passe**, avec la
+confirmation d'email **désactivée** : aucun email n'est jamais envoyé, donc
+aucun SMTP, aucun template, aucun service tiers à configurer. L'email sert
+uniquement d'identifiant pour pouvoir revenir modifier sa réponse.
 
 ## 1. Créer le projet Supabase
 
@@ -16,70 +18,21 @@ email. Suis les étapes ci-dessous une seule fois.
 2. Copie-colle le contenu de `supabase/schema.sql`, puis clique **Run**.
 3. Vérifie sous **Database → Tables** que `rsvps` apparaît, et sous **Authentication → Policies** qu'il y a bien `rsvps_select_own`, `rsvps_insert_own` et `rsvps_update_own`.
 
-## 3. Configurer l'auth par OTP (code à 6 chiffres)
+## 3. Configurer l'authentification (email + mot de passe, sans email)
 
-Par défaut, Supabase envoie un **lien magique** au lieu d'un code, et son service
-email gratuit n'envoie qu'à ton organisation. Il faut donc un SMTP custom, puis
-ajuster le template. C'est l'étape la plus importante.
+> C'est l'étape clé de cette approche : on désactive la confirmation par email
+> pour que `signUp` ouvre directement une session, sans qu'aucun mail ne parte.
 
-### 3.a — Brancher un SMTP custom (OBLIGATOIRE)
+1. Va dans **Authentication → Sign In / Providers → Email**.
+2. Vérifie que le provider **Email** est **activé**.
+3. **Désactive « Confirm email »** (le toggle doit être sur OFF).
+4. Laisse tout le reste par défaut. Tu n'as **rien** à faire côté SMTP, templates
+   ou Resend.
 
-> ⚠️ Depuis septembre 2024, le service email **par défaut** de Supabase :
-> - **n'envoie qu'aux adresses membres de ton organisation Supabase** (tes
->   invités ne recevraient donc jamais le mail), et
-> - **interdit d'éditer les templates** (donc impossible d'afficher un code
->   à 6 chiffres `{{ .Token }}`).
->
-> Il faut donc impérativement configurer ton propre SMTP. Le plus simple
-> quand on a un Gmail et un faible volume (quelques dizaines d'invités) :
-> utiliser le SMTP de Gmail. Alternatives sans domaine : Brevo (300/j gratuit,
-> vérif d'un simple expéditeur) ou SendGrid (100/j, single sender). Avec un
-> domaine à toi : Resend.
-
-**Option Gmail (recommandée ici) :**
-
-1. Sur ton compte Google : **Compte Google → Sécurité → Validation en 2 étapes**
-   doit être **activée** (obligatoire pour générer un mot de passe d'application).
-2. Toujours dans Sécurité, ouvre **Mots de passe des applications**, crée-en un
-   (nom libre, ex. « Supabase ») et copie le mot de passe à 16 caractères.
-3. Dans Supabase : **Authentication → Emails → SMTP Settings** (ou le bouton
-   **Set up SMTP**), active *Enable Custom SMTP* et renseigne :
-   - **Sender email** : ton adresse Gmail (ex. `mayorr27@gmail.com`)
-   - **Sender name** : ex. `Anniversaires Corcelles`
-   - **Host** : `smtp.gmail.com`
-   - **Port** : `465`
-   - **Username** : ton adresse Gmail complète
-   - **Password** : le mot de passe d'application à 16 caractères (PAS ton mot de passe Gmail habituel)
-4. Enregistre. L'édition des templates est maintenant débloquée.
-
-### 3.b — Mettre le code à 6 chiffres dans le template
-
-1. Va dans **Authentication → Emails → Templates → « Magic link or OTP »**.
-2. Onglet **Source** du corps, **remplace tout le contenu** (qui contient
-   actuellement un lien `{{ .ConfirmationURL }}`) par un code `{{ .Token }}`.
-   Exemple :
-
-   ```html
-   <h2>Votre code de connexion</h2>
-   <p>Voici votre code pour confirmer votre réponse à l'invitation du 29 août :</p>
-   <p style="font-size:28px;font-weight:bold;letter-spacing:4px">{{ .Token }}</p>
-   <p>Ce code est valable 1 heure. Si vous n'êtes pas à l'origine de cette
-   demande, vous pouvez ignorer ce message.</p>
-   ```
-
-   Tu peux aussi adapter le **Subject**, ex. `Votre code pour l'invitation`.
-
-   > ⚠️ Tant que le template contient `{{ .ConfirmationURL }}`, Supabase envoie
-   > un lien magique au lieu d'un code, et le site ne pourra pas valider l'OTP.
-
-3. **Authentication → Sign In / Providers → Email** : vérifie qu'**Email** est
-   activé et **désactive « Confirm email »**. Ainsi, un nouvel invité reçoit
-   directement le code (sinon Supabase envoie d'abord un mail « Confirm signup »
-   séparé pour les premières réponses).
-
-4. **Authentication → URL Configuration** :
-   - **Site URL** : ton URL GitHub Pages, ex. `https://gheyraud225.github.io/AnnivDes0/`.
-   - **Redirect URLs** : ajoute la même URL (ça ne sert pas pour l'OTP, mais évite les warnings).
+> ℹ️ Avec « Confirm email » sur OFF, un nouvel invité qui clique sur « Créer mon
+> accès » est connecté immédiatement. S'il est resté sur ON, le compte est créé
+> mais sans session, et le site affichera un message demandant de désactiver
+> cette option.
 
 ## 4. Renseigner les clés dans le site
 
@@ -101,15 +54,13 @@ ajuster le template. C'est l'étape la plus importante.
 Sur ton téléphone ou en navigation privée :
 
 1. Ouvre l'URL GitHub Pages.
-2. Remplis le formulaire avec un email **différent** de ton compte Supabase
-   (pour vérifier que le SMTP envoie bien à n'importe qui), clique **Envoyer ma réponse**.
-3. Tu devrais recevoir un mail avec un code à 6 chiffres → entre-le dans la fenêtre.
-   - Si tu reçois un **lien** au lieu d'un code → le template contient encore
-     `{{ .ConfirmationURL }}` (revois l'étape 3.b).
-   - Si tu ne reçois **rien** → le SMTP n'est pas (bien) configuré, regarde
-     **Authentication → Emails → Logs** dans Supabase, et tes spams.
-4. Confettis + toast → la ligne apparaît dans **Database → rsvps**.
-5. Reviens plus tard sur un autre appareil → clique **Modifier une réponse déjà envoyée** → entre le même email → code → le formulaire est prérempli avec ta réponse précédente.
+2. Dans le bloc de connexion, entre un email + un mot de passe, clique **Créer mon accès**.
+   - Tu dois être connecté immédiatement (le formulaire RSVP apparaît).
+   - Si un message te demande de désactiver « Confirm email », c'est que l'étape 3.3 n'a pas été appliquée.
+3. Remplis le formulaire, clique **Envoyer ma réponse** → confettis + toast.
+4. La ligne apparaît dans **Database → rsvps**.
+5. **Se déconnecter**, puis reviens sur un **autre appareil** → entre le **même email + mot de passe** → **Se connecter** → le formulaire est prérempli avec ta réponse → modifie → **Mettre à jour ma réponse**.
+6. Vérifie dans **Database → rsvps** qu'il n'y a **toujours qu'une seule ligne** pour cet email (l'upsert met à jour, il ne duplique pas).
 
 ## 6. Empêcher la mise en pause du projet (gratuit)
 
@@ -135,3 +86,13 @@ Le workflow est déjà inclus, il tournera automatiquement à 09h00 UTC tous les
   order by created_at desc;
   ```
   puis clique sur **Download CSV** en bas du résultat.
+
+> Astuce : les emails des invités ne sont **pas** dans la table `rsvps` (seul
+> l'`user_id` y figure). Pour relier une réponse à un email, regarde
+> **Authentication → Users**, ou fais une jointure en SQL :
+> ```sql
+> select u.email, r.full_name, r.attending, r.activities, r.companions
+> from public.rsvps r
+> join auth.users u on u.id = r.user_id
+> order by r.created_at desc;
+> ```

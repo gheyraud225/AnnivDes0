@@ -609,7 +609,8 @@ fieldset.field {
 .rsvp-toolbar {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
+  align-items: center;
+  justify-content: space-between;
   gap: 0.4rem 1.2rem;
   margin: 0 0 1rem;
 }
@@ -641,31 +642,50 @@ fieldset.field {
   line-height: 1.35;
 }
 
+.auth-block {
+  background: var(--paper);
+  border-radius: var(--radius);
+  padding: clamp(1.2rem, 4vw, 1.8rem);
+  box-shadow: var(--shadow);
+  text-align: left;
+}
+
 .auth-intro {
-  margin: 0 0 0.4rem;
+  margin: 0 0 1rem;
   color: var(--ink-soft);
   font-size: 0.95rem;
-  line-height: 1.4;
+  line-height: 1.45;
 }
 
-.auth-step #auth-resend {
-  margin-top: 0.5rem;
-  padding-left: 0;
+.auth-form {
+  display: grid;
+  gap: 1rem;
 }
 
-.welcome-banner {
-  display: flex;
-  align-items: center;
+.auth-actions {
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 0.6rem;
-  background: linear-gradient(135deg, #fff1d6, #ffe3ec);
-  border-radius: 14px;
-  padding: 0.7rem 0.9rem;
-  margin: 0 0 1rem;
-  font-size: 0.95rem;
-  color: var(--ink);
 }
 
-.welcome-banner-emoji { font-size: 1.3rem; }
+.auth-actions .cta {
+  width: 100%;
+  max-width: none;
+  margin-top: 0;
+}
+
+.auth-identity {
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+  margin-right: auto;
+  word-break: break-all;
+}
+
+.auth-identity strong { color: var(--ink); font-weight: 600; }
+
+@media (min-width: 480px) {
+  .auth-actions { grid-template-columns: 1fr 1fr; }
+}
 
 /* ---------- Accompagnants ---------- */
 

@@ -1,10 +1,12 @@
-// RSVP — front Supabase
+// RSVP — front Supabase (email + mot de passe, sans confirmation)
 //
-// Toute la logique d'envoi/lecture passe par Supabase (table public.rsvps).
-// Auth : code OTP à 6 chiffres par email. Un invité ↔ une ligne (user_id unique).
+// La connexion se fait avec email + mot de passe via Supabase Auth, avec
+// "Confirm email" désactivé côté Supabase. Aucun mail n'est jamais envoyé,
+// donc aucun SMTP n'est requis. L'email sert uniquement d'identifiant.
 //
-// L'existant (cases d'activités, dialogue accompagnants, confettis, toast,
-// préremplissage depuis ?nom=) est conservé intégralement.
+// Chaque invité ↔ une ligne dans public.rsvps (user_id unique). Une fois
+// connecté, le formulaire est prérempli avec la réponse existante et le
+// bouton submit devient "Mettre à jour".
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./config.js";
@@ -58,18 +60,27 @@ const cleanName = prettify(sanitize(params.get("nom") || params.get("name") || "
 const nameTarget = $("guest-name");
 if (cleanName && nameTarget) nameTarget.textContent = cleanName;
 
-// ---------- éléments du formulaire principal --------------------------
+// ---------- éléments DOM ---------------------------------------------
+
+const authBlock = $("auth-block");
+const authForm = $("auth-form");
+const authEmail = $("auth-email");
+const authPassword = $("auth-password");
+const authStatus = $("auth-status");
+const authSignUpBtn = $("auth-signup");
+const authSignInBtn = $("auth-signin");
+
+const rsvpBlock = $("rsvp-block");
+const signOutBtn = $("sign-out");
+const authIdentity = $("auth-identity");
 
 const form = $("rsvp-form");
 const status = $("form-status");
 const submitButton = $("rsvp-submit");
 const fullnameInput = $("fullname");
-const emailInput = $("email");
 const dietInput = $("diet");
 const messageInput = $("message");
 const activitiesHost = form.querySelector(".activities");
-
-if (cleanName && !fullnameInput.value) fullnameInput.value = cleanName;
 
 const PRESENCE = "presence";
 const presenceRadios = form.querySelectorAll('input[name="' + PRESENCE + '"]');
@@ -141,16 +152,15 @@ const syncCompanionsState = () => {
   }
 };
 
-const buildCompanionActivities = (preselected = []) => {
+const buildCompanionActivities = () => {
   companionActivitiesHost.innerHTML = "";
   activitiesHost.querySelectorAll(".activity-choice").forEach((src, idx) => {
     const srcLabel = src.closest(".check-card");
     const inner = srcLabel ? srcLabel.querySelector("span").innerHTML : src.value;
     const label = document.createElement("label");
     label.className = "check-card";
-    const checked = preselected.includes(src.value) ? " checked" : "";
     label.innerHTML =
-      '<input type="checkbox" data-companion-activity="' + idx + '" value="' + escapeHtml(src.value) + '"' + checked + " />" +
+      '<input type="checkbox" data-companion-activity="' + idx + '" value="' + escapeHtml(src.value) + '" />' +
       "<span>" + inner + "</span>";
     companionActivitiesHost.appendChild(label);
   });
@@ -207,7 +217,7 @@ presenceRadios.forEach((r) => r.addEventListener("change", () => {
 syncActivitiesState();
 syncCompanionsState();
 
-// ---------- confettis + toast (inchangé) ------------------------------
+// ---------- confettis + toast ----------------------------------------
 
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -250,94 +260,7 @@ const showToast = (title, text) => {
   toastTimer = setTimeout(() => toast.classList.remove("visible"), 6000);
 };
 
-// ---------- modale OTP (auth) -----------------------------------------
-
-const authDialog = $("auth-dialog");
-const authForm = $("auth-form");
-const authStepEmail = $("auth-step-email");
-const authStepCode = $("auth-step-code");
-const authEmailInput = $("auth-email");
-const authCodeInput = $("auth-code");
-const authEmailDisplay = $("auth-email-display");
-const authStatus = $("auth-status");
-const authSubmit = $("auth-submit");
-const authCancel = $("auth-cancel");
-const authClose = $("auth-close");
-const authResend = $("auth-resend");
-const authTitle = $("auth-dialog-title");
-const authIntroEmail = $("auth-intro-email");
-
-// Modes possibles de la modale :
-//   "save"     → après vérif on enregistre la ligne avec le payload courant
-//   "load"     → après vérif on charge la ligne existante et préremplit
-// Le payload n'est utile qu'en mode "save".
-let authMode = "save";
-let pendingPayload = null;
-let pendingEmail = "";
-
-const setAuthStep = (step) => {
-  authStepEmail.hidden = step !== "email";
-  authStepCode.hidden = step !== "code";
-  authSubmit.textContent = step === "email" ? "Envoyer le code" : "Valider";
-  setStatus(authStatus, "", "");
-  setTimeout(() => {
-    if (step === "email") authEmailInput.focus();
-    if (step === "code") authCodeInput.focus();
-  }, 80);
-};
-
-const openAuthDialog = (mode, prefillEmail = "") => {
-  authMode = mode;
-  pendingEmail = "";
-  authForm.reset();
-  authEmailInput.value = prefillEmail;
-  authTitle.textContent =
-    mode === "load" ? "Modifier ma réponse" : "Vérifions votre email";
-  authIntroEmail.textContent =
-    mode === "load"
-      ? "Entrez l'email utilisé lors de votre première réponse. On vous envoie un code à 6 chiffres pour vous reconnecter."
-      : "On vous envoie un code à 6 chiffres pour confirmer votre réponse.";
-  setAuthStep("email");
-  if (typeof authDialog.showModal === "function") {
-    authDialog.showModal();
-  } else {
-    authDialog.setAttribute("open", "");
-  }
-};
-
-const closeAuthDialog = () => {
-  if (typeof authDialog.close === "function" && authDialog.open) {
-    authDialog.close();
-  } else {
-    authDialog.removeAttribute("open");
-  }
-};
-
-authClose.addEventListener("click", closeAuthDialog);
-authCancel.addEventListener("click", closeAuthDialog);
-authDialog.addEventListener("click", (e) => {
-  if (e.target === authDialog) closeAuthDialog();
-});
-
 // ---------- communication Supabase ------------------------------------
-
-const sendOtp = async (email) => {
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: { shouldCreateUser: true },
-  });
-  if (error) throw error;
-};
-
-const verifyOtp = async (email, token) => {
-  const { data, error } = await supabase.auth.verifyOtp({
-    email,
-    token,
-    type: "email",
-  });
-  if (error) throw error;
-  return data;
-};
 
 const fetchMyRsvp = async () => {
   const { data, error } = await supabase
@@ -362,12 +285,11 @@ const saveRsvp = async (payload) => {
   return data;
 };
 
-// ---------- préremplissage depuis une ligne existante -----------------
+// ---------- préremplissage --------------------------------------------
 
 const applyRsvpRow = (row) => {
   if (!row) return;
   fullnameInput.value = row.full_name || "";
-  // L'email vient de la session Supabase (cf. refreshAuthUI), pas de la table.
   presenceRadios.forEach((r) => {
     r.checked = (row.attending && r.value === "oui") ||
                 (!row.attending && r.value === "non");
@@ -383,7 +305,9 @@ const applyRsvpRow = (row) => {
     if (c && typeof c.name === "string") {
       companions.push({
         name: c.name,
-        activities: Array.isArray(c.activities) ? c.activities.filter(a => typeof a === "string") : [],
+        activities: Array.isArray(c.activities)
+          ? c.activities.filter((a) => typeof a === "string")
+          : [],
       });
     }
   });
@@ -393,53 +317,124 @@ const applyRsvpRow = (row) => {
   messageInput.value = row.message || "";
 };
 
-// ---------- état connecté / déconnecté --------------------------------
+// ---------- bascule UI connecté / déconnecté -------------------------
 
-const signOutBtn = $("sign-out");
-const openModifyBtn = $("open-modify");
-
-const refreshAuthUI = async () => {
-  const { data: { session } } = await supabase.auth.getSession();
-  const loggedIn = !!session;
-  signOutBtn.hidden = !loggedIn;
-  openModifyBtn.hidden = loggedIn;
-  if (loggedIn && session.user.email) {
-    emailInput.value = session.user.email;
-    emailInput.setAttribute("readonly", "");
-  } else {
-    emailInput.removeAttribute("readonly");
-  }
-  submitButton.textContent = loggedIn ? "Mettre à jour ma réponse" : "Envoyer ma réponse";
-  let banner = $("welcome-banner");
-  if (loggedIn) {
-    if (!banner) {
-      banner = document.createElement("div");
-      banner.id = "welcome-banner";
-      banner.className = "welcome-banner";
-      banner.innerHTML =
-        '<span class="welcome-banner-emoji" aria-hidden="true">👋</span>' +
-        '<span></span>';
-      form.parentNode.insertBefore(banner, form);
-    }
-    banner.querySelector("span:last-child").textContent =
-      "Bon retour ! Vous pouvez ajuster votre réponse ci-dessous.";
-  } else if (banner) {
-    banner.remove();
-  }
-  return loggedIn;
+const explainError = (error) => {
+  if (!error) return "Une erreur inattendue est survenue.";
+  const msg = (error.message || "").toLowerCase();
+  if (msg.includes("invalid login")) return "Email ou mot de passe incorrect.";
+  if (msg.includes("already registered") || msg.includes("user already")) return "Cet email a déjà un accès. Cliquez sur Se connecter.";
+  if (msg.includes("password should be at least")) return "Le mot de passe doit faire au moins 6 caractères.";
+  if (msg.includes("rate") || msg.includes("too many")) return "Trop de tentatives. Patientez quelques instants.";
+  if (msg.includes("network") || msg.includes("fetch")) return "Problème de connexion. Vérifiez votre internet.";
+  return error.message || "Erreur inconnue.";
 };
+
+let isUpdate = false; // true si une ligne rsvp existait déjà au chargement
+
+const showAuth = () => {
+  rsvpBlock.hidden = true;
+  authBlock.hidden = false;
+};
+
+const showRsvp = (email) => {
+  authBlock.hidden = true;
+  rsvpBlock.hidden = false;
+  authIdentity.innerHTML = "Connecté en tant que <strong>" + escapeHtml(email || "") + "</strong>";
+  submitButton.textContent = isUpdate ? "Mettre à jour ma réponse" : "Envoyer ma réponse";
+  // Préremplissage du nom depuis ?nom= si le champ est encore vide.
+  if (cleanName && !fullnameInput.value) fullnameInput.value = cleanName;
+};
+
+const loadAndShowConnected = async (session) => {
+  let row = null;
+  try {
+    row = await fetchMyRsvp();
+  } catch (err) {
+    console.error(err);
+  }
+  isUpdate = !!row;
+  if (row) applyRsvpRow(row);
+  showRsvp(session.user.email);
+};
+
+// ---------- auth handlers --------------------------------------------
+
+const lockAuthForm = (lock) => {
+  authSignUpBtn.disabled = lock;
+  authSignInBtn.disabled = lock;
+  authEmail.disabled = lock;
+  authPassword.disabled = lock;
+};
+
+const handleAuth = async (mode) => {
+  const email = normalizeEmail(authEmail.value);
+  const password = authPassword.value;
+
+  if (!email || !authEmail.checkValidity()) {
+    authEmail.focus();
+    authEmail.reportValidity();
+    return;
+  }
+  if (password.length < 6) {
+    authPassword.focus();
+    setStatus(authStatus, "error", "Le mot de passe doit faire au moins 6 caractères.");
+    return;
+  }
+
+  lockAuthForm(true);
+  setStatus(authStatus, "", mode === "signup" ? "Création en cours…" : "Connexion en cours…");
+
+  try {
+    const result =
+      mode === "signup"
+        ? await supabase.auth.signUp({ email, password })
+        : await supabase.auth.signInWithPassword({ email, password });
+    if (result.error) throw result.error;
+
+    // Avec "Confirm email" OFF, signUp renvoie directement une session.
+    const session = result.data && result.data.session;
+    if (!session) {
+      // Filet : si la confirmation par email est encore active, signUp ne
+      // crée pas de session — on l'explique clairement.
+      setStatus(authStatus, "error",
+        "Compte créé, mais la connexion automatique a échoué. Désactivez \"Confirm email\" dans Supabase puis réessayez.");
+      lockAuthForm(false);
+      return;
+    }
+
+    setStatus(authStatus, "", "");
+    authForm.reset();
+    await loadAndShowConnected(session);
+  } catch (err) {
+    console.error(err);
+    setStatus(authStatus, "error", explainError(err));
+  } finally {
+    lockAuthForm(false);
+  }
+};
+
+authSignUpBtn.addEventListener("click", () => handleAuth("signup"));
+authForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  handleAuth("signin");
+});
 
 signOutBtn.addEventListener("click", async () => {
   await supabase.auth.signOut();
+  companions.length = 0;
+  renderCompanions();
+  form.reset();
+  syncActivitiesState();
+  syncCompanionsState();
+  isUpdate = false;
   setStatus(status, "", "");
-  await refreshAuthUI();
+  setStatus(authStatus, "", "");
+  showAuth();
+  setTimeout(() => authEmail.focus(), 60);
 });
 
-openModifyBtn.addEventListener("click", () => {
-  openAuthDialog("load", emailInput.value.trim());
-});
-
-// ---------- collecte du payload depuis le formulaire ------------------
+// ---------- submit RSVP -----------------------------------------------
 
 const collectPayload = () => {
   const attending = getPresence() === "oui";
@@ -458,34 +453,16 @@ const collectPayload = () => {
   };
 };
 
-// ---------- flux : submit principal -----------------------------------
-
-const lockSubmit = (lock, label) => {
-  submitButton.disabled = lock;
-  if (label) submitButton.textContent = label;
-};
-
-const finishSuccess = async (isUpdate) => {
+const finishSuccess = (wasUpdate) => {
   const firstName = (fullnameInput.value.trim().split(/\s+/)[0]) || "";
-  setStatus(status, "success", isUpdate ? "Réponse mise à jour ✓" : "Réponse envoyée ✓");
+  setStatus(status, "success", wasUpdate ? "Réponse mise à jour ✓" : "Réponse envoyée ✓");
   showToast(
     firstName ? "Merci " + firstName + " !" : "Merci !",
-    isUpdate
+    wasUpdate
       ? "Votre réponse a bien été mise à jour. On a hâte de vous voir le 29 août !"
       : "Votre réponse est bien partie. On a hâte de vous voir le 29 août !",
   );
   burstConfetti();
-  await refreshAuthUI();
-};
-
-const explainError = (error) => {
-  if (!error) return "Une erreur inattendue est survenue.";
-  const msg = (error.message || "").toLowerCase();
-  if (msg.includes("invalid") && msg.includes("token")) return "Code invalide ou expiré. Réessayez ou demandez un nouveau code.";
-  if (msg.includes("expired")) return "Le code a expiré. Demandez-en un nouveau.";
-  if (msg.includes("rate") || msg.includes("too many")) return "Trop de tentatives. Patientez quelques instants avant de réessayer.";
-  if (msg.includes("network") || msg.includes("fetch")) return "Problème de connexion. Vérifiez votre internet et réessayez.";
-  return error.message || "Erreur inconnue.";
 };
 
 form.addEventListener("submit", async (event) => {
@@ -495,156 +472,55 @@ form.addEventListener("submit", async (event) => {
     setStatus(status, "error", "Merci de remplir les champs obligatoires.");
     return;
   }
-  const email = normalizeEmail(emailInput.value);
-  if (!email) {
-    emailInput.focus();
-    return;
-  }
-
   const payload = collectPayload();
-
   const { data: { session } } = await supabase.auth.getSession();
-
-  if (session) {
-    // Déjà connecté → upsert direct.
-    lockSubmit(true, "Mise à jour en cours…");
-    setStatus(status, "", "Enregistrement en cours…");
-    try {
-      await saveRsvp(payload);
-      lockSubmit(false, "Mettre à jour ma réponse");
-      await finishSuccess(true);
-    } catch (err) {
-      console.error(err);
-      lockSubmit(false, "Mettre à jour ma réponse");
-      setStatus(status, "error", explainError(err));
-    }
+  if (!session) {
+    setStatus(status, "error", "Votre session a expiré. Reconnectez-vous.");
+    showAuth();
     return;
   }
-
-  // Pas de session → on demande le code OTP, puis on enregistre.
-  pendingPayload = payload;
-  openAuthDialog("save", email);
-  // On déclenche aussi l'envoi du code immédiatement pour gagner un tour
-  // (le bouton "Envoyer le code" du dialog déclenche la même action si
-  // l'utilisateur préfère réagir manuellement).
-  authEmailInput.value = email;
-  await triggerSendOtp();
-});
-
-// ---------- flux : étapes de la modale auth ---------------------------
-
-const triggerSendOtp = async () => {
-  const email = normalizeEmail(authEmailInput.value);
-  if (!email || !authEmailInput.checkValidity()) {
-    authEmailInput.focus();
-    authEmailInput.reportValidity();
-    return;
-  }
-  authSubmit.disabled = true;
-  setStatus(authStatus, "", "Envoi du code en cours…");
+  submitButton.disabled = true;
+  const originalLabel = submitButton.textContent;
+  submitButton.textContent = isUpdate ? "Mise à jour en cours…" : "Envoi en cours…";
+  setStatus(status, "", "");
   try {
-    await sendOtp(email);
-    pendingEmail = email;
-    authEmailDisplay.textContent = email;
-    setAuthStep("code");
-    setStatus(authStatus, "success", "Code envoyé. Vérifiez votre boîte mail.");
+    await saveRsvp(payload);
+    const wasUpdate = isUpdate;
+    isUpdate = true; // toute soumission ultérieure sera une mise à jour
+    submitButton.textContent = "Mettre à jour ma réponse";
+    finishSuccess(wasUpdate);
   } catch (err) {
     console.error(err);
-    setStatus(authStatus, "error", explainError(err));
+    submitButton.textContent = originalLabel;
+    setStatus(status, "error", explainError(err));
   } finally {
-    authSubmit.disabled = false;
-  }
-};
-
-const triggerVerifyOtp = async () => {
-  const token = (authCodeInput.value || "").replace(/\D/g, "").slice(0, 6);
-  if (token.length !== 6) {
-    authCodeInput.focus();
-    setStatus(authStatus, "error", "Entrez le code à 6 chiffres reçu par email.");
-    return;
-  }
-  authSubmit.disabled = true;
-  setStatus(authStatus, "", "Vérification en cours…");
-  try {
-    await verifyOtp(pendingEmail, token);
-    setStatus(authStatus, "success", "Code accepté ✓");
-
-    if (authMode === "save") {
-      // Enregistre la réponse en attente avec la nouvelle session.
-      // Si le payload a été perdu (très improbable, ex. rechargement),
-      // on recollecte depuis le formulaire courant.
-      const toSave = pendingPayload || collectPayload();
-      try {
-        // Détermine si une ligne existait déjà avant l'upsert,
-        // pour adapter le toast de confirmation.
-        const existing = await fetchMyRsvp();
-        await saveRsvp(toSave);
-        closeAuthDialog();
-        pendingPayload = null;
-        await finishSuccess(!!existing);
-      } catch (err) {
-        console.error(err);
-        setStatus(authStatus, "error", explainError(err));
-      }
-    } else {
-      // Mode "load" : on récupère la ligne existante et préremplit.
-      try {
-        const row = await fetchMyRsvp();
-        if (row) {
-          applyRsvpRow(row);
-          closeAuthDialog();
-          await refreshAuthUI();
-          setStatus(status, "success", "Réponse chargée. Modifiez-la puis enregistrez.");
-          const rsvpSection = document.getElementById("rsvp");
-          if (rsvpSection) rsvpSection.scrollIntoView({ behavior: "smooth", block: "start" });
-        } else {
-          closeAuthDialog();
-          await refreshAuthUI();
-          setStatus(status, "", "Aucune réponse trouvée pour cet email — remplissez le formulaire pour la première fois.");
-        }
-      } catch (err) {
-        console.error(err);
-        setStatus(authStatus, "error", explainError(err));
-      }
-    }
-  } catch (err) {
-    console.error(err);
-    setStatus(authStatus, "error", explainError(err));
-  } finally {
-    authSubmit.disabled = false;
-  }
-};
-
-authForm.addEventListener("submit", (e) => {
-  e.preventDefault();
-  if (authStepEmail.hidden) {
-    triggerVerifyOtp();
-  } else {
-    triggerSendOtp();
+    submitButton.disabled = false;
   }
 });
 
-authResend.addEventListener("click", () => {
-  authCodeInput.value = "";
-  triggerSendOtp();
-});
-
-// ---------- initialisation : si déjà connecté, on charge la réponse ----
+// ---------- initialisation -------------------------------------------
 
 const init = async () => {
   try {
-    const loggedIn = await refreshAuthUI();
-    if (loggedIn) {
-      const row = await fetchMyRsvp();
-      if (row) applyRsvpRow(row);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      await loadAndShowConnected(session);
+    } else {
+      showAuth();
     }
   } catch (err) {
     console.error(err);
+    showAuth();
   }
 };
 
-supabase.auth.onAuthStateChange(() => {
-  refreshAuthUI().catch(() => { /* noop */ });
+supabase.auth.onAuthStateChange((event, session) => {
+  // Pas de reload UI ici : c'est handleAuth / signOut qui gèrent les transitions.
+  // Cette écoute sert juste de filet pour les expirations de token.
+  if (!session && !authBlock.hidden) return;
+  if (!session && rsvpBlock.hidden === false) {
+    showAuth();
+  }
 });
 
 init();
