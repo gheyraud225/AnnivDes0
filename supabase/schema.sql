@@ -69,3 +69,82 @@ create trigger set_rsvps_updated_at
   before update on public.rsvps
   for each row
   execute function public.set_updated_at();
+
+-- =====================================================================
+-- 4. Accès admin (tableau de bord)
+--
+-- Un admin peut LIRE toutes les réponses. La sécurité repose entièrement
+-- sur la RLS ci-dessous : ouvrir admin.html sans être admin ne renvoie
+-- aucune donnée.
+-- =====================================================================
+
+-- 4.1 Table des admins. RLS activée SANS aucune policy => personne ne peut
+--     la lire/modifier via l'API publique. On la gère depuis le SQL editor.
+create table if not exists public.admins (
+  user_id  uuid primary key references auth.users(id) on delete cascade,
+  added_at timestamptz not null default now()
+);
+
+alter table public.admins enable row level security;
+
+-- 4.2 Fonction helper : l'utilisateur courant est-il admin ?
+--     SECURITY DEFINER pour pouvoir lire public.admins malgré sa RLS.
+create or replace function public.is_admin()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from public.admins where user_id = auth.uid()
+  );
+$$;
+
+grant execute on function public.is_admin() to authenticated;
+
+-- 4.3 Policy : un admin peut lire toutes les lignes rsvps.
+--     (Les policies permissives s'additionnent : un invité normal continue
+--      de ne voir que la sienne via rsvps_select_own.)
+drop policy if exists "rsvps_select_admin" on public.rsvps;
+create policy "rsvps_select_admin"
+  on public.rsvps for select
+  to authenticated
+  using (public.is_admin());
+
+-- 4.4 Fonction qui renvoie toutes les réponses + l'email de chaque invité.
+--     SECURITY DEFINER (peut lire auth.users), mais protégée par un filtre
+--     `where public.is_admin()` : un non-admin reçoit zéro ligne.
+create or replace function public.admin_list_rsvps()
+returns table (
+  id          uuid,
+  email       text,
+  full_name   text,
+  attending   boolean,
+  activities  jsonb,
+  companions  jsonb,
+  diet        text,
+  message     text,
+  created_at  timestamptz,
+  updated_at  timestamptz
+)
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select
+    r.id, u.email, r.full_name, r.attending, r.activities,
+    r.companions, r.diet, r.message, r.created_at, r.updated_at
+  from public.rsvps r
+  join auth.users u on u.id = r.user_id
+  where public.is_admin()
+  order by r.full_name;
+$$;
+
+grant execute on function public.admin_list_rsvps() to authenticated;
+
+-- Pour devenir admin (à exécuter une fois, après s'être inscrit sur le site) :
+--   insert into public.admins (user_id)
+--   select id from auth.users where email = 'TON_EMAIL@exemple.com'
+--   on conflict do nothing;

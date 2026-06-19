@@ -62,6 +62,30 @@ Sur ton téléphone ou en navigation privée :
 5. **Se déconnecter**, puis reviens sur un **autre appareil** → entre le **même email + mot de passe** → **Se connecter** → le formulaire est prérempli avec ta réponse → modifie → **Mettre à jour ma réponse**.
 6. Vérifie dans **Database → rsvps** qu'il n'y a **toujours qu'une seule ligne** pour cet email (l'upsert met à jour, il ne duplique pas).
 
+## 5 bis. Tableau de bord admin (`admin.html`)
+
+La page `admin.html` (sur la même URL, ex. `…github.io/AnnivDes0/admin.html`)
+affiche qui vient, les accompagnants, et le décompte par activité. Elle est
+**réservée aux admins** : la sécurité vient de la RLS, pas du fait que l'URL
+soit discrète. Un compte non-admin qui ouvre la page ne voit **aucune** donnée.
+
+Tu as déjà tout côté base si tu as exécuté `supabase/schema.sql` (il crée la
+table `admins`, la fonction `is_admin()` et `admin_list_rsvps()`). Il reste à
+**te déclarer admin** :
+
+1. Inscris-toi d'abord normalement sur le site (pour exister dans `auth.users`).
+2. Dans **SQL Editor**, exécute (avec ton email) :
+   ```sql
+   insert into public.admins (user_id)
+   select id from auth.users where email = 'mayorr27@gmail.com'
+   on conflict do nothing;
+   ```
+3. Ouvre `admin.html`, connecte-toi avec ce compte → le tableau de bord s'affiche.
+
+> Pour ajouter un autre organisateur : il s'inscrit sur le site, puis tu relances
+> la requête ci-dessus avec son email. Pour retirer un admin :
+> `delete from public.admins where user_id = (select id from auth.users where email = '…');`
+
 ## 6. Empêcher la mise en pause du projet (gratuit)
 
 Les projets Supabase gratuits sont mis en pause après **7 jours d'inactivité**.

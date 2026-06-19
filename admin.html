@@ -1,0 +1,234 @@
+<!--
+  Tableau de bord admin — réservé aux organisateurs.
+
+  La sécurité ne vient PAS du fait que cette page soit "cachée" : n'importe qui
+  peut ouvrir cette URL. C'est la RLS Supabase (fonction is_admin + policy
+  rsvps_select_admin) qui fait que seuls les comptes inscrits dans la table
+  public.admins reçoivent des données. Un visiteur non-admin ne voit rien.
+
+  Pour devenir admin : voir SETUP.md (insert dans public.admins).
+-->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#ff4f8b" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Tableau de bord — RSVP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Caveat:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .admin-wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 860px;
+      margin: 0 auto;
+      padding: clamp(1.2rem, 5vw, 2.5rem);
+    }
+    .admin-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.5rem 1rem;
+      margin-bottom: 1.2rem;
+    }
+    .admin-header h1 {
+      font-size: clamp(1.8rem, 6vw, 2.6rem);
+      background: linear-gradient(120deg, var(--violet), var(--pink));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .admin-id { font-size: 0.85rem; color: var(--ink-soft); }
+    .admin-toolbar { display: flex; gap: 1.2rem; align-items: center; }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.7rem;
+      margin-bottom: 1.6rem;
+    }
+    .stat-card {
+      background: var(--paper);
+      border-radius: 14px;
+      padding: 1rem 1.1rem;
+      box-shadow: 0 8px 20px -15px rgba(34, 34, 59, 0.25);
+      border-left: 4px solid var(--pink);
+    }
+    .stat-card:nth-child(2) { border-left-color: var(--turquoise); }
+    .stat-card:nth-child(3) { border-left-color: var(--yellow); }
+    .stat-card:nth-child(4) { border-left-color: var(--violet); }
+    .stat-num { font-size: 2rem; font-weight: 700; line-height: 1; }
+    .stat-label { font-size: 0.85rem; color: var(--ink-soft); margin-top: 0.2rem; }
+
+    .admin-section { margin-bottom: 2rem; }
+    .admin-section > h2 {
+      font-size: 1.3rem;
+      margin-bottom: 0.8rem;
+      color: var(--ink);
+    }
+
+    .act-row {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      padding: 0.6rem 0.9rem;
+      background: var(--paper);
+      border-radius: 12px;
+      margin-bottom: 0.5rem;
+      box-shadow: 0 8px 20px -16px rgba(34, 34, 59, 0.25);
+    }
+    .act-name { flex: 1; font-weight: 500; }
+    .act-count {
+      flex-shrink: 0;
+      min-width: 2.2rem;
+      text-align: center;
+      font-weight: 700;
+      color: white;
+      background: linear-gradient(120deg, var(--pink), var(--coral));
+      border-radius: 999px;
+      padding: 0.2rem 0.6rem;
+    }
+    .act-bar {
+      flex-basis: 100%;
+      height: 6px;
+      border-radius: 6px;
+      background: var(--paper-2);
+      overflow: hidden;
+      order: 3;
+    }
+    .act-bar > span {
+      display: block;
+      height: 100%;
+      background: linear-gradient(120deg, var(--violet), var(--pink));
+    }
+
+    .party {
+      background: var(--paper);
+      border-radius: 14px;
+      padding: 0.9rem 1.1rem;
+      margin-bottom: 0.7rem;
+      box-shadow: 0 8px 20px -16px rgba(34, 34, 59, 0.25);
+    }
+    .party-head {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      flex-wrap: wrap;
+    }
+    .party-name { font-weight: 600; font-size: 1.05rem; }
+    .party-email { font-size: 0.8rem; color: var(--ink-soft); }
+    .badge {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 0.15rem 0.55rem;
+      border-radius: 999px;
+    }
+    .badge--total { background: #e8e0ff; color: var(--violet); margin-left: auto; }
+    .chips { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.5rem; }
+    .chip {
+      font-size: 0.8rem;
+      background: #ffeef3;
+      border: 1px solid #ffd6e2;
+      border-radius: 999px;
+      padding: 0.15rem 0.6rem;
+    }
+    .chip--none { background: var(--paper-2); border-color: #ecdfd0; color: var(--ink-soft); font-style: italic; }
+    .sub {
+      margin-top: 0.6rem;
+      padding-top: 0.6rem;
+      border-top: 1px dashed #ecdfd0;
+    }
+    .sub-person { margin-top: 0.5rem; }
+    .sub-person:first-child { margin-top: 0; }
+    .sub-name { font-size: 0.92rem; font-weight: 500; }
+    .sub-name::before { content: "↳ "; color: var(--ink-soft); }
+    .party-extra { font-size: 0.85rem; color: var(--ink-soft); margin-top: 0.5rem; }
+    .party-extra strong { color: var(--ink); font-weight: 600; }
+
+    .absent .party { opacity: 0.75; }
+    .empty-note { color: var(--ink-soft); font-style: italic; }
+
+    .admin-auth {
+      max-width: 420px;
+      margin: 8vh auto 0;
+    }
+    .admin-auth .card { text-align: left; }
+
+    @media (min-width: 560px) {
+      .stat-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="confetti" aria-hidden="true"></div>
+
+  <!-- Vue connexion -->
+  <div id="view-auth" class="admin-auth" hidden>
+    <div class="card">
+      <p class="card-eyebrow">Espace organisateurs</p>
+      <h2 style="margin-bottom:1rem">Tableau de bord</h2>
+      <form id="admin-auth-form" class="auth-form" autocomplete="on">
+        <div class="field">
+          <label for="admin-email">Email</label>
+          <input type="email" id="admin-email" autocomplete="email" inputmode="email" required maxlength="120" />
+        </div>
+        <div class="field">
+          <label for="admin-password">Mot de passe</label>
+          <input type="password" id="admin-password" autocomplete="current-password" required minlength="6" maxlength="72" />
+        </div>
+        <p id="admin-auth-status" class="form-status" role="status" aria-live="polite"></p>
+        <button type="submit" class="cta" id="admin-signin">Se connecter</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Vue accès refusé -->
+  <div id="view-denied" class="admin-auth" hidden>
+    <div class="card">
+      <h2>Accès réservé</h2>
+      <p class="card-lede" style="margin:0.6rem auto 1.2rem">Ce compte n'est pas administrateur. Si c'est une erreur, ajoutez-le à la table <code>admins</code> (voir SETUP.md).</p>
+      <button type="button" class="cta cta--ghost" id="denied-signout">Se déconnecter</button>
+    </div>
+  </div>
+
+  <!-- Vue tableau de bord -->
+  <main id="view-dash" class="admin-wrap" hidden>
+    <div class="admin-header">
+      <h1>Qui vient ?</h1>
+      <div class="admin-toolbar">
+        <span class="admin-id" id="admin-id"></span>
+        <button type="button" class="link-button" id="refresh">Rafraîchir</button>
+        <button type="button" class="link-button" id="signout">Se déconnecter</button>
+      </div>
+    </div>
+
+    <p id="dash-status" class="form-status" role="status" aria-live="polite"></p>
+
+    <div class="stat-grid" id="stats"></div>
+
+    <section class="admin-section">
+      <h2>Par activité</h2>
+      <div id="activity-counts"></div>
+    </section>
+
+    <section class="admin-section">
+      <h2 id="present-title">Présents</h2>
+      <div id="present-list"></div>
+    </section>
+
+    <section class="admin-section absent">
+      <h2 id="absent-title">Ne viennent pas</h2>
+      <div id="absent-list"></div>
+    </section>
+  </main>
+
+  <script type="module" src="admin.js"></script>
+</body>
+</html>
