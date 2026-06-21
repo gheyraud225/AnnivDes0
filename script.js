@@ -107,7 +107,10 @@ const getCheckedActivities = () =>
 const syncActivitiesState = () => {
   const off = isNotComing();
   activitiesHost.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
-    cb.disabled = off;
+    const locked = cb.dataset.locked === "true";
+    cb.disabled = off || locked;
+    // Décocher quand on dit "Non" ; garder la case si elle est verrouillée
+    // (un invité déjà inscrit à une activité complète conserve sa place).
     if (off) cb.checked = false;
   });
   activitiesHost.style.opacity = off ? 0.5 : 1;
@@ -165,10 +168,12 @@ const buildCompanionActivities = () => {
   activitiesHost.querySelectorAll(".activity-choice").forEach((src, idx) => {
     const srcLabel = src.closest(".check-card");
     const inner = srcLabel ? srcLabel.querySelector("span").innerHTML : src.value;
+    const locked = src.dataset.locked === "true";
     const label = document.createElement("label");
-    label.className = "check-card";
+    label.className = "check-card" + (locked ? " is-locked" : "");
     label.innerHTML =
-      '<input type="checkbox" data-companion-activity="' + idx + '" value="' + escapeHtml(src.value) + '" />' +
+      '<input type="checkbox" data-companion-activity="' + idx + '" value="' +
+        escapeHtml(src.value) + '"' + (locked ? " disabled" : "") + " />" +
       "<span>" + inner + "</span>";
     companionActivitiesHost.appendChild(label);
   });

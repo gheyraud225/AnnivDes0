@@ -342,6 +342,23 @@ p { margin: 0 0 0.6rem; }
 
 .slot-body { flex: 1; min-width: 0; }
 
+.slot-body h4 .full-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: white;
+  background: var(--coral);
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  vertical-align: 0.15em;
+}
+
+.slot.is-full .slot-body h4 { color: var(--ink-soft); }
+.slot.is-full { opacity: 0.85; }
+
 .slot-body p {
   color: var(--ink-soft);
   margin: 0.2rem 0 0;
@@ -451,6 +468,27 @@ fieldset.field {
 
 .radio-card:active,
 .check-card:active { transform: scale(0.99); }
+
+.check-card.is-locked {
+  background: var(--paper-2);
+  border-color: #ecdfd0;
+  color: var(--ink-soft);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.check-card.is-locked:active { transform: none; }
+.check-card.is-locked input { cursor: not-allowed; }
+.check-card.is-locked em { color: var(--coral); font-weight: 600; }
+
+/* Si la place a été acquise avant le verrouillage, on la garde visible. */
+.check-card.is-locked:has(input:checked) {
+  border-color: var(--pink);
+  background: #ffeef3;
+  opacity: 0.95;
+  color: var(--ink);
+}
+.check-card.is-locked:has(input:checked) em { color: var(--ink-soft); font-weight: normal; }
 
 .check-card span {
   display: flex;
