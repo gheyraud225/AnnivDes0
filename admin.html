@@ -229,6 +229,58 @@
     .edit-dialog .body { padding: 0.9rem 1.1rem; display: flex; flex-direction: column; gap: 0.8rem; }
     .edit-dialog footer { border-top: 1px solid #f1e3d2; }
     .edit-dialog footer .cta { margin-top: 0; flex: 1; padding: 0.7rem 1rem; font-size: 0.95rem; }
+    .edit-dialog .body--scroll { max-height: 70dvh; overflow-y: auto; }
+    .edit-dialog .danger {
+      flex: 0 0 auto;
+      background: white;
+      color: var(--coral);
+      border: 1px solid #ffd6e2;
+      box-shadow: none;
+    }
+    .edit-dialog .danger:hover { background: #fff0f3; }
+
+    .party-actions { display: flex; gap: 0.4rem; margin-top: 0.5rem; }
+    .party-actions button {
+      font: inherit;
+      font-size: 0.82rem;
+      padding: 0.35rem 0.7rem;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .party-actions .edit-rsvp { background: var(--paper-2); color: var(--ink); }
+    .party-actions .delete-rsvp { background: white; color: var(--coral); border-color: #ffd6e2; }
+
+    .edit-dialog .companions-mini {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 0.4rem;
+    }
+    .edit-dialog .companion-mini {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.7rem;
+      background: #ffeef3;
+      border: 1px solid #ffd6e2;
+      border-radius: 10px;
+    }
+    .edit-dialog .companion-mini-name { flex: 1; font-size: 0.92rem; }
+    .edit-dialog .companion-mini-acts { font-size: 0.78rem; color: var(--ink-soft); }
+    .edit-dialog .companion-mini button {
+      background: white;
+      border: none;
+      border-radius: 50%;
+      width: 26px;
+      height: 26px;
+      cursor: pointer;
+      color: var(--ink-soft);
+      font-size: 1rem;
+      line-height: 1;
+    }
 
     @media (min-width: 560px) {
       .stat-grid { grid-template-columns: repeat(4, 1fr); }
@@ -304,6 +356,77 @@
       <div id="absent-list"></div>
     </section>
   </main>
+
+  <dialog id="edit-rsvp" class="edit-dialog" aria-labelledby="edit-rsvp-title">
+    <form id="edit-rsvp-form">
+      <header>
+        <h3 id="edit-rsvp-title">Modifier la réponse</h3>
+        <button type="button" class="link-button" id="edit-rsvp-close" aria-label="Fermer">×</button>
+      </header>
+      <div class="body body--scroll">
+        <div class="field">
+          <label for="rsvp-fullname">Nom complet</label>
+          <input type="text" id="rsvp-fullname" required maxlength="80" />
+        </div>
+        <div class="field">
+          <label class="field-hint" id="rsvp-email-display"></label>
+        </div>
+        <fieldset class="field" role="radiogroup" aria-labelledby="rsvp-presence-legend">
+          <legend id="rsvp-presence-legend">Présence</legend>
+          <div class="radios">
+            <label class="radio-card"><input type="radio" name="rsvp-presence" value="oui" required /><span>Oui</span></label>
+            <label class="radio-card"><input type="radio" name="rsvp-presence" value="non" /><span>Hélas non</span></label>
+          </div>
+        </fieldset>
+        <fieldset class="field activities" id="rsvp-activities-host">
+          <legend>Activités</legend>
+        </fieldset>
+        <fieldset class="field" aria-labelledby="rsvp-companions-legend">
+          <legend id="rsvp-companions-legend">Accompagnants</legend>
+          <ul id="rsvp-companions-list" class="companions-mini"></ul>
+          <button type="button" id="rsvp-add-companion" class="add-companion"><span aria-hidden="true">＋</span> Ajouter un accompagnant</button>
+        </fieldset>
+        <div class="field">
+          <label for="rsvp-diet">Régime / allergies</label>
+          <input type="text" id="rsvp-diet" maxlength="200" />
+        </div>
+        <div class="field">
+          <label for="rsvp-message">Message</label>
+          <textarea id="rsvp-message" rows="2" maxlength="1000"></textarea>
+        </div>
+        <p id="edit-rsvp-status" class="form-status" role="status" aria-live="polite"></p>
+      </div>
+      <footer>
+        <button type="button" class="danger" id="edit-rsvp-delete">Supprimer</button>
+        <button type="button" class="cta cta--ghost" id="edit-rsvp-cancel">Annuler</button>
+        <button type="submit" class="cta" id="edit-rsvp-save">Enregistrer</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <!-- Mini-dialogue : ajouter / éditer un accompagnant côté admin -->
+  <dialog id="edit-companion" class="edit-dialog" aria-labelledby="edit-companion-title">
+    <form id="edit-companion-form">
+      <header>
+        <h3 id="edit-companion-title">Accompagnant</h3>
+        <button type="button" class="link-button" id="edit-companion-close" aria-label="Fermer">×</button>
+      </header>
+      <div class="body">
+        <div class="field">
+          <label for="comp-name">Prénom et nom</label>
+          <input type="text" id="comp-name" required maxlength="60" />
+        </div>
+        <fieldset class="field activities" id="comp-activities-host">
+          <legend>Activités</legend>
+        </fieldset>
+        <p id="edit-companion-status" class="form-status"></p>
+      </div>
+      <footer>
+        <button type="button" class="cta cta--ghost" id="edit-companion-cancel">Annuler</button>
+        <button type="submit" class="cta" id="edit-companion-save">Ajouter</button>
+      </footer>
+    </form>
+  </dialog>
 
   <dialog id="edit-activity" class="edit-dialog" aria-labelledby="edit-activity-title">
     <form id="edit-activity-form">

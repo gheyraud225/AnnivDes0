@@ -154,6 +154,12 @@ const chips = (acts) => {
   return acts.map((a) => '<span class="chip">' + escapeHtml(a) + "</span>").join("");
 };
 
+const partyActions = () =>
+  '<div class="party-actions">' +
+    '<button type="button" class="edit-rsvp" data-action="edit-rsvp">Modifier</button>' +
+    '<button type="button" class="delete-rsvp" data-action="delete-rsvp">Supprimer</button>' +
+  '</div>';
+
 const renderPresent = (present) => {
   const host = $("present-list");
   if (!present.length) {
@@ -166,7 +172,7 @@ const renderPresent = (present) => {
       const acts = sortActivities(asActivities(row.activities).map(activityLabel).filter(Boolean));
       const size = 1 + comps.length;
       let html =
-        '<div class="party"><div class="party-head">' +
+        '<div class="party" data-rsvp-id="' + escapeHtml(row.id) + '"><div class="party-head">' +
         '<span class="party-name">' + escapeHtml(row.full_name || "—") + "</span>";
       if (row.email) html += '<span class="party-email">' + escapeHtml(row.email) + "</span>";
       html += '<span class="badge badge--total">' + size + " pers.</span></div>";
@@ -182,6 +188,7 @@ const renderPresent = (present) => {
       }
       if (row.diet) html += '<div class="party-extra"><strong>Régime :</strong> ' + escapeHtml(row.diet) + "</div>";
       if (row.message) html += '<div class="party-extra"><strong>Message :</strong> ' + escapeHtml(row.message) + "</div>";
+      html += partyActions();
       html += "</div>";
       return html;
     })
@@ -197,11 +204,12 @@ const renderAbsent = (absent) => {
   host.innerHTML = absent
     .map((row) => {
       let html =
-        '<div class="party"><div class="party-head">' +
+        '<div class="party" data-rsvp-id="' + escapeHtml(row.id) + '"><div class="party-head">' +
         '<span class="party-name">' + escapeHtml(row.full_name || "—") + "</span>";
       if (row.email) html += '<span class="party-email">' + escapeHtml(row.email) + "</span>";
       html += "</div>";
       if (row.message) html += '<div class="party-extra"><strong>Message :</strong> ' + escapeHtml(row.message) + "</div>";
+      html += partyActions();
       html += "</div>";
       return html;
     })
@@ -356,6 +364,8 @@ $("activities-admin").addEventListener("click", async (e) => {
 
 // ---------- chargement ------------------------------------------------
 
+let rsvpsCache = new Map(); // id -> row
+
 const loadDashboard = async () => {
   setStatus($("dash-status"), "", "Chargement…");
   await loadActivities();
@@ -368,6 +378,7 @@ const loadDashboard = async () => {
     return;
   }
   const rows = Array.isArray(data) ? data : [];
+  rsvpsCache = new Map(rows.map((r) => [r.id, r]));
   const present = rows.filter((r) => r.attending);
   const absent = rows.filter((r) => !r.attending);
 
@@ -396,6 +407,236 @@ const loadDashboard = async () => {
   $("absent-title").textContent = "Ne viennent pas (" + absent.length + ")";
   setStatus($("dash-status"), "", "");
 };
+
+// ---------- édition / suppression d'un RSVP ---------------------------
+
+const editRsvpDialog = $("edit-rsvp");
+const editRsvpForm = $("edit-rsvp-form");
+const rsvpFullname = $("rsvp-fullname");
+const rsvpEmailDisplay = $("rsvp-email-display");
+const rsvpDiet = $("rsvp-diet");
+const rsvpMessage = $("rsvp-message");
+const rsvpActivitiesHost = $("rsvp-activities-host");
+const rsvpCompanionsList = $("rsvp-companions-list");
+const rsvpAddCompanionBtn = $("rsvp-add-companion");
+const editRsvpStatus = $("edit-rsvp-status");
+const editRsvpDeleteBtn = $("edit-rsvp-delete");
+
+// État local pendant l'édition
+let editingRsvp = null;
+let editingCompanions = []; // [{ name, activities: [uuid] }]
+
+const renderRsvpActivities = (selectedIds) => {
+  // Vide tout sauf la <legend>
+  Array.from(rsvpActivitiesHost.querySelectorAll(".check-card")).forEach((el) => el.remove());
+  if (!activitiesCache.length) return;
+  activitiesCache.forEach((a) => {
+    const checked = selectedIds.includes(a.id) ? " checked" : "";
+    const label = document.createElement("label");
+    label.className = "check-card";
+    label.innerHTML =
+      '<input type="checkbox" data-activity-id="' + escapeHtml(a.id) + '"' + checked + " />" +
+      "<span><strong>" + escapeHtml(a.label) + "</strong>" +
+        (a.time_label ? "<em>" + escapeHtml(a.time_label) + "</em>" : "") +
+      "</span>";
+    rsvpActivitiesHost.appendChild(label);
+  });
+};
+
+const renderEditingCompanions = () => {
+  rsvpCompanionsList.innerHTML = "";
+  if (!editingCompanions.length) {
+    const li = document.createElement("li");
+    li.className = "empty-note";
+    li.textContent = "Aucun accompagnant.";
+    rsvpCompanionsList.appendChild(li);
+    return;
+  }
+  editingCompanions.forEach((c, i) => {
+    const labels = (c.activities || []).map(activityLabel).filter(Boolean);
+    const li = document.createElement("li");
+    li.className = "companion-mini";
+    li.innerHTML =
+      '<span class="companion-mini-name">' + escapeHtml(c.name) +
+        (labels.length ? ' <span class="companion-mini-acts">— ' + escapeHtml(labels.join(", ")) + "</span>" : "") +
+      "</span>" +
+      '<button type="button" data-action="edit-comp" aria-label="Modifier">✎</button>' +
+      '<button type="button" data-action="del-comp" aria-label="Retirer">×</button>';
+    li.querySelectorAll("button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (btn.dataset.action === "del-comp") {
+          editingCompanions.splice(i, 1);
+          renderEditingCompanions();
+        } else if (btn.dataset.action === "edit-comp") {
+          openCompanionEditor(i);
+        }
+      });
+    });
+    rsvpCompanionsList.appendChild(li);
+  });
+};
+
+const openEditRsvp = (row) => {
+  editingRsvp = row;
+  rsvpFullname.value = row.full_name || "";
+  rsvpEmailDisplay.textContent = row.email ? "Compte : " + row.email : "";
+  rsvpDiet.value = row.diet || "";
+  rsvpMessage.value = row.message || "";
+  editRsvpForm.querySelectorAll('input[name="rsvp-presence"]').forEach((r) => {
+    r.checked = (row.attending && r.value === "oui") || (!row.attending && r.value === "non");
+  });
+  renderRsvpActivities(asActivities(row.activities));
+  editingCompanions = asCompanions(row.companions).map((c) => ({
+    name: c.name,
+    activities: asActivities(c.activities),
+  }));
+  renderEditingCompanions();
+  setStatus(editRsvpStatus, "", "");
+  if (typeof editRsvpDialog.showModal === "function") editRsvpDialog.showModal();
+  else editRsvpDialog.setAttribute("open", "");
+  setTimeout(() => rsvpFullname.focus(), 60);
+};
+
+const closeEditRsvp = () => {
+  if (typeof editRsvpDialog.close === "function" && editRsvpDialog.open) editRsvpDialog.close();
+  else editRsvpDialog.removeAttribute("open");
+};
+
+$("edit-rsvp-close").addEventListener("click", closeEditRsvp);
+$("edit-rsvp-cancel").addEventListener("click", closeEditRsvp);
+editRsvpDialog.addEventListener("click", (e) => { if (e.target === editRsvpDialog) closeEditRsvp(); });
+
+editRsvpForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!editingRsvp) return;
+  const attending = editRsvpForm.querySelector('input[name="rsvp-presence"]:checked').value === "oui";
+  const activities = attending
+    ? Array.from(rsvpActivitiesHost.querySelectorAll('input[type="checkbox"]:checked'))
+        .map((cb) => cb.dataset.activityId)
+    : [];
+  const companions = attending
+    ? editingCompanions.map((c) => ({
+        name: c.name.slice(0, 60),
+        activities: (c.activities || []).slice(0),
+      }))
+    : [];
+  const payload = {
+    full_name: rsvpFullname.value.trim().slice(0, 80),
+    attending,
+    activities,
+    companions,
+    diet: rsvpDiet.value.trim().slice(0, 200) || null,
+    message: rsvpMessage.value.trim().slice(0, 1000) || null,
+  };
+  setStatus(editRsvpStatus, "", "Enregistrement…");
+  const { error } = await supabase.from("rsvps").update(payload).eq("id", editingRsvp.id);
+  if (error) {
+    console.error(error);
+    setStatus(editRsvpStatus, "error", explainError(error));
+    return;
+  }
+  closeEditRsvp();
+  await loadDashboard();
+});
+
+editRsvpDeleteBtn.addEventListener("click", async () => {
+  if (!editingRsvp) return;
+  if (!window.confirm("Supprimer définitivement la réponse de " + (editingRsvp.full_name || editingRsvp.email || "cet invité") + " ?")) return;
+  const { error } = await supabase.from("rsvps").delete().eq("id", editingRsvp.id);
+  if (error) {
+    console.error(error);
+    setStatus(editRsvpStatus, "error", explainError(error));
+    return;
+  }
+  closeEditRsvp();
+  await loadDashboard();
+});
+
+// ---------- mini-dialogue : accompagnant ------------------------------
+
+const editCompDialog = $("edit-companion");
+const editCompForm = $("edit-companion-form");
+const compName = $("comp-name");
+const compActivitiesHost = $("comp-activities-host");
+const editCompTitle = $("edit-companion-title");
+const editCompSave = $("edit-companion-save");
+let editingCompanionIndex = null;
+
+const renderCompActivities = (selectedIds) => {
+  Array.from(compActivitiesHost.querySelectorAll(".check-card")).forEach((el) => el.remove());
+  if (!activitiesCache.length) return;
+  activitiesCache.forEach((a) => {
+    const checked = selectedIds.includes(a.id) ? " checked" : "";
+    const label = document.createElement("label");
+    label.className = "check-card";
+    label.innerHTML =
+      '<input type="checkbox" data-activity-id="' + escapeHtml(a.id) + '"' + checked + " />" +
+      "<span><strong>" + escapeHtml(a.label) + "</strong>" +
+        (a.time_label ? "<em>" + escapeHtml(a.time_label) + "</em>" : "") +
+      "</span>";
+    compActivitiesHost.appendChild(label);
+  });
+};
+
+const openCompanionEditor = (index) => {
+  editingCompanionIndex = index;
+  const existing = index != null ? editingCompanions[index] : null;
+  editCompTitle.textContent = existing ? "Modifier l'accompagnant" : "Ajouter un accompagnant";
+  editCompSave.textContent = existing ? "Enregistrer" : "Ajouter";
+  compName.value = existing ? existing.name : "";
+  renderCompActivities(existing ? existing.activities : []);
+  if (typeof editCompDialog.showModal === "function") editCompDialog.showModal();
+  else editCompDialog.setAttribute("open", "");
+  setTimeout(() => compName.focus(), 60);
+};
+
+const closeCompanionEditor = () => {
+  if (typeof editCompDialog.close === "function" && editCompDialog.open) editCompDialog.close();
+  else editCompDialog.removeAttribute("open");
+};
+
+$("edit-companion-close").addEventListener("click", closeCompanionEditor);
+$("edit-companion-cancel").addEventListener("click", closeCompanionEditor);
+editCompDialog.addEventListener("click", (e) => { if (e.target === editCompDialog) closeCompanionEditor(); });
+
+editCompForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const name = compName.value.trim().replace(/\s+/g, " ").slice(0, 60);
+  if (!name) { compName.focus(); return; }
+  const acts = Array.from(compActivitiesHost.querySelectorAll('input[type="checkbox"]:checked'))
+    .map((cb) => cb.dataset.activityId);
+  if (editingCompanionIndex == null) {
+    editingCompanions.push({ name, activities: acts });
+  } else {
+    editingCompanions[editingCompanionIndex] = { name, activities: acts };
+  }
+  closeCompanionEditor();
+  renderEditingCompanions();
+});
+
+rsvpAddCompanionBtn.addEventListener("click", () => openCompanionEditor(null));
+
+// Délégation : clic sur "Modifier" / "Supprimer" d'une carte invité.
+const handlePartyClick = (e) => {
+  const btn = e.target.closest("button[data-action]");
+  if (!btn) return;
+  const party = btn.closest(".party");
+  if (!party) return;
+  const id = party.dataset.rsvpId;
+  const row = rsvpsCache.get(id);
+  if (!row) return;
+  if (btn.dataset.action === "edit-rsvp") {
+    openEditRsvp(row);
+  } else if (btn.dataset.action === "delete-rsvp") {
+    if (!window.confirm("Supprimer la réponse de " + (row.full_name || row.email || "cet invité") + " ?")) return;
+    supabase.from("rsvps").delete().eq("id", id).then(({ error }) => {
+      if (error) { console.error(error); alert("Erreur : " + explainError(error)); return; }
+      loadDashboard();
+    });
+  }
+};
+$("present-list").addEventListener("click", handlePartyClick);
+$("absent-list").addEventListener("click", handlePartyClick);
 
 // ---------- routage ---------------------------------------------------
 

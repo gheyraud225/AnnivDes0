@@ -359,9 +359,16 @@ const showToast = (title, text) => {
 // ---------- communication Supabase ------------------------------------
 
 const fetchMyRsvp = async () => {
+  // On filtre explicitement par user_id : un admin voit toutes les lignes via
+  // la RLS, donc sans ce filtre maybeSingle() ramasserait potentiellement
+  // d'autres invités.
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData && userData.user;
+  if (!user) return null;
   const { data, error } = await supabase
     .from("rsvps")
     .select("*")
+    .eq("user_id", user.id)
     .maybeSingle();
   if (error) throw error;
   return data;

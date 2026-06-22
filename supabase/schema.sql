@@ -103,12 +103,25 @@ $$;
 
 grant execute on function public.is_admin() to authenticated;
 
--- 4.3 Policy : un admin peut lire toutes les lignes rsvps.
---     (Les policies permissives s'additionnent : un invité normal continue
---      de ne voir que la sienne via rsvps_select_own.)
+-- 4.3 Policies admin : lecture / modification / suppression de toutes les
+--     lignes rsvps. Les policies permissives s'additionnent : un invité
+--     normal continue de ne voir et modifier que la sienne.
 drop policy if exists "rsvps_select_admin" on public.rsvps;
 create policy "rsvps_select_admin"
   on public.rsvps for select
+  to authenticated
+  using (public.is_admin());
+
+drop policy if exists "rsvps_update_admin" on public.rsvps;
+create policy "rsvps_update_admin"
+  on public.rsvps for update
+  to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
+
+drop policy if exists "rsvps_delete_admin" on public.rsvps;
+create policy "rsvps_delete_admin"
+  on public.rsvps for delete
   to authenticated
   using (public.is_admin());
 
