@@ -163,7 +163,7 @@ const renderPresent = (present) => {
   host.innerHTML = present
     .map((row) => {
       const comps = asCompanions(row.companions);
-      const acts = sortActivities(asActivities(row.activities));
+      const acts = sortActivities(asActivities(row.activities).map(activityLabel).filter(Boolean));
       const size = 1 + comps.length;
       let html =
         '<div class="party"><div class="party-head">' +
@@ -176,7 +176,7 @@ const renderPresent = (present) => {
         comps.forEach((c) => {
           html +=
             '<div class="sub-person"><div class="sub-name">' + escapeHtml(c.name) + "</div>" +
-            '<div class="chips">' + chips(sortActivities(c.activities)) + "</div></div>";
+            '<div class="chips">' + chips(sortActivities(c.activities.map(activityLabel).filter(Boolean))) + "</div></div>";
         });
         html += "</div>";
       }
@@ -208,10 +208,159 @@ const renderAbsent = (absent) => {
     .join("");
 };
 
+// ---------- activités : CRUD + cache local ----------------------------
+
+let activitiesCache = []; // [{ id, label, time_label, time_sort, description, max_participants, taken, ... }]
+const activityLabel = (id) => {
+  const a = activitiesCache.find((x) => x.id === id);
+  return a ? (a.label + (a.time_label ? " (" + a.time_label + ")" : "")) : null;
+};
+
+const parseTimeSort = (s) => {
+  if (!s) return 9999;
+  const m = /^\s*(\d{1,2})\s*[h:.]\s*(\d{0,2})\s*$/i.exec(s);
+  if (!m) return 9999;
+  const h = parseInt(m[1], 10);
+  const min = m[2] ? parseInt(m[2], 10) : 0;
+  if (Number.isNaN(h) || Number.isNaN(min)) return 9999;
+  return h * 60 + min;
+};
+
+const loadActivities = async () => {
+  const { data, error } = await supabase.rpc("list_activities_with_counts");
+  if (error) { console.error(error); activitiesCache = []; return; }
+  activitiesCache = Array.isArray(data) ? data : [];
+};
+
+const renderActivitiesAdmin = () => {
+  const host = $("activities-admin");
+  if (!activitiesCache.length) {
+    host.innerHTML = '<p class="empty-note">Aucune activité. Ajoutez-en une ci-dessous.</p>';
+    return;
+  }
+  host.innerHTML = activitiesCache
+    .map((a) => {
+      const max = a.max_participants;
+      const meta =
+        (a.time_label ? a.time_label + " · " : "") +
+        (max == null
+          ? a.taken + " inscrit" + (a.taken > 1 ? "s" : "") + " (illimité)"
+          : a.taken + "/" + max +
+            (a.taken >= max ? ' <span class="full">complet</span>' : ""));
+      return (
+        '<div class="activity-row" data-id="' + escapeHtml(a.id) + '">' +
+          '<div class="activity-row-main">' +
+            '<div class="activity-row-label">' + escapeHtml(a.label) + "</div>" +
+            '<div class="activity-row-meta">' + meta + "</div>" +
+          "</div>" +
+          '<button type="button" class="edit-btn" data-action="edit">Modifier</button>' +
+          '<button type="button" class="delete-btn" data-action="delete">Supprimer</button>' +
+        "</div>"
+      );
+    })
+    .join("");
+};
+
+// Dialogue d'édition (création + modification)
+const editDialog = $("edit-activity");
+const editForm = $("edit-activity-form");
+const editLabel = $("edit-label");
+const editTime = $("edit-time");
+const editMax = $("edit-max");
+const editDesc = $("edit-desc");
+const editStatus = $("edit-status");
+const editTitle = $("edit-activity-title");
+let editingId = null;
+
+const openEdit = (a) => {
+  editingId = a ? a.id : null;
+  editTitle.textContent = a ? "Modifier l'activité" : "Ajouter une activité";
+  editLabel.value = a ? a.label : "";
+  editTime.value = a ? a.time_label : "";
+  editMax.value = a && a.max_participants != null ? String(a.max_participants) : "";
+  editDesc.value = a ? (a.description || "") : "";
+  setStatus(editStatus, "", "");
+  if (typeof editDialog.showModal === "function") editDialog.showModal();
+  else editDialog.setAttribute("open", "");
+  setTimeout(() => editLabel.focus(), 60);
+};
+const closeEdit = () => {
+  if (typeof editDialog.close === "function" && editDialog.open) editDialog.close();
+  else editDialog.removeAttribute("open");
+};
+
+$("edit-close").addEventListener("click", closeEdit);
+$("edit-cancel").addEventListener("click", closeEdit);
+editDialog.addEventListener("click", (e) => { if (e.target === editDialog) closeEdit(); });
+
+editForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const label = editLabel.value.trim().slice(0, 80);
+  if (!label) { editLabel.focus(); return; }
+  const time = editTime.value.trim().slice(0, 10);
+  const maxRaw = editMax.value.trim();
+  const max = maxRaw === "" ? null : Math.max(0, parseInt(maxRaw, 10) || 0);
+  const desc = editDesc.value.trim().slice(0, 300) || null;
+  const payload = {
+    label,
+    time_label: time,
+    time_sort: parseTimeSort(time),
+    max_participants: max,
+    description: desc,
+  };
+  setStatus(editStatus, "", "Enregistrement…");
+  try {
+    if (editingId) {
+      const { error } = await supabase.from("activities").update(payload).eq("id", editingId);
+      if (error) throw error;
+    } else {
+      // position = max(position) + 1 pour rester en fin de liste si time_sort
+      // est identique à une autre
+      payload.position = activitiesCache.reduce((m, a) => Math.max(m, a.position || 0), 0) + 1;
+      const { error } = await supabase.from("activities").insert(payload);
+      if (error) throw error;
+    }
+    closeEdit();
+    await loadDashboard();
+  } catch (err) {
+    console.error(err);
+    setStatus(editStatus, "error", explainError(err));
+  }
+});
+
+$("add-activity").addEventListener("click", () => openEdit(null));
+
+$("activities-admin").addEventListener("click", async (e) => {
+  const btn = e.target.closest("button[data-action]");
+  if (!btn) return;
+  const row = btn.closest(".activity-row");
+  const id = row && row.dataset.id;
+  const a = activitiesCache.find((x) => x.id === id);
+  if (!a) return;
+  if (btn.dataset.action === "edit") {
+    openEdit(a);
+  } else if (btn.dataset.action === "delete") {
+    const confirmMsg = a.taken > 0
+      ? "Supprimer « " + a.label + " » ? " + a.taken + " inscription(s) existante(s) seront orphelines."
+      : "Supprimer « " + a.label + " » ?";
+    if (!window.confirm(confirmMsg)) return;
+    const { error } = await supabase.from("activities").delete().eq("id", id);
+    if (error) {
+      console.error(error);
+      alert("Erreur : " + explainError(error));
+      return;
+    }
+    await loadDashboard();
+  }
+});
+
 // ---------- chargement ------------------------------------------------
 
 const loadDashboard = async () => {
   setStatus($("dash-status"), "", "Chargement…");
+  await loadActivities();
+  renderActivitiesAdmin();
+
   const { data, error } = await supabase.rpc("admin_list_rsvps");
   if (error) {
     console.error(error);
@@ -225,9 +374,13 @@ const loadDashboard = async () => {
   let headcount = 0;
   present.forEach((r) => { headcount += partySize(r); });
 
-  // Décompte par activité (répondant principal + accompagnants).
+  // Décompte par activité (répondant principal + accompagnants), mappé via le cache.
   const tally = new Map();
-  const add = (acts) => asActivities(acts).forEach((a) => tally.set(a, (tally.get(a) || 0) + 1));
+  const add = (acts) => asActivities(acts).forEach((id) => {
+    const label = activityLabel(id);
+    if (!label) return; // activité supprimée : on ignore
+    tally.set(label, (tally.get(label) || 0) + 1);
+  });
   present.forEach((r) => {
     add(r.activities);
     asCompanions(r.companions).forEach((c) => add(c.activities));

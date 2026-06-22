@@ -161,6 +161,75 @@
     }
     .admin-auth .card { text-align: left; }
 
+    .admin-hint { color: var(--ink-soft); font-size: 0.9rem; margin: -0.3rem 0 0.8rem; }
+
+    .activity-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 0.5rem;
+      align-items: center;
+      padding: 0.6rem 0.9rem;
+      background: var(--paper);
+      border-radius: 12px;
+      margin-bottom: 0.5rem;
+      box-shadow: 0 8px 20px -16px rgba(34, 34, 59, 0.25);
+    }
+    .activity-row-main { min-width: 0; }
+    .activity-row-label { font-weight: 600; word-break: break-word; }
+    .activity-row-meta { font-size: 0.82rem; color: var(--ink-soft); margin-top: 0.15rem; }
+    .activity-row-meta .full { color: var(--coral); font-weight: 600; }
+    .activity-row button {
+      font: inherit;
+      font-size: 0.85rem;
+      padding: 0.45rem 0.7rem;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .activity-row .edit-btn { background: var(--paper-2); color: var(--ink); }
+    .activity-row .delete-btn { background: white; color: var(--coral); border-color: #ffd6e2; }
+    .activity-row button:hover { filter: brightness(0.97); }
+
+    #add-activity { width: 100%; max-width: none; margin-top: 0.4rem; }
+
+    .edit-dialog {
+      width: min(420px, calc(100vw - 1.5rem));
+      max-width: none;
+      margin: auto;
+      padding: 0;
+      border: none;
+      border-radius: 20px;
+      background: var(--paper);
+      color: var(--ink);
+      box-shadow: 0 30px 70px -20px rgba(34, 34, 59, 0.45);
+      overflow: hidden;
+    }
+    .edit-dialog::backdrop { background: rgba(34, 34, 59, 0.5); }
+    .edit-dialog form { display: flex; flex-direction: column; }
+    .edit-dialog header,
+    .edit-dialog footer {
+      display: flex;
+      gap: 0.5rem;
+      padding: 0.9rem 1.1rem;
+    }
+    .edit-dialog header {
+      border-bottom: 1px solid #f1e3d2;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .edit-dialog header h3 {
+      font-size: 1.1rem;
+      margin: 0;
+      background: linear-gradient(120deg, var(--violet), var(--pink));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .edit-dialog .body { padding: 0.9rem 1.1rem; display: flex; flex-direction: column; gap: 0.8rem; }
+    .edit-dialog footer { border-top: 1px solid #f1e3d2; }
+    .edit-dialog footer .cta { margin-top: 0; flex: 1; padding: 0.7rem 1rem; font-size: 0.95rem; }
+
     @media (min-width: 560px) {
       .stat-grid { grid-template-columns: repeat(4, 1fr); }
     }
@@ -214,6 +283,13 @@
     <div class="stat-grid" id="stats"></div>
 
     <section class="admin-section">
+      <h2>Gérer les activités</h2>
+      <p class="admin-hint">Ajouter, renommer, changer l'heure ou fixer un nombre max de places. Une fois la limite atteinte, l'activité bascule automatiquement en « complet » côté invité.</p>
+      <div id="activities-admin"></div>
+      <button type="button" class="cta cta--ghost" id="add-activity">＋ Ajouter une activité</button>
+    </section>
+
+    <section class="admin-section">
       <h2>Par activité</h2>
       <div id="activity-counts"></div>
     </section>
@@ -228,6 +304,38 @@
       <div id="absent-list"></div>
     </section>
   </main>
+
+  <dialog id="edit-activity" class="edit-dialog" aria-labelledby="edit-activity-title">
+    <form id="edit-activity-form">
+      <header>
+        <h3 id="edit-activity-title">Modifier l'activité</h3>
+        <button type="button" class="link-button" id="edit-close" aria-label="Fermer">×</button>
+      </header>
+      <div class="body">
+        <div class="field">
+          <label for="edit-label">Nom de l'activité</label>
+          <input type="text" id="edit-label" required maxlength="80" placeholder="ex. Atelier poterie" />
+        </div>
+        <div class="field">
+          <label for="edit-time">Heure</label>
+          <input type="text" id="edit-time" maxlength="10" placeholder="ex. 14h00" />
+        </div>
+        <div class="field">
+          <label for="edit-max">Nombre max de places (laisser vide = illimité)</label>
+          <input type="number" id="edit-max" min="0" max="999" placeholder="illimité" />
+        </div>
+        <div class="field">
+          <label for="edit-desc">Description (optionnelle, affichée dans le programme)</label>
+          <textarea id="edit-desc" rows="2" maxlength="300" placeholder="ex. Séance douce pour réveiller les corps."></textarea>
+        </div>
+        <p id="edit-status" class="form-status" role="status" aria-live="polite"></p>
+      </div>
+      <footer>
+        <button type="button" class="cta cta--ghost" id="edit-cancel">Annuler</button>
+        <button type="submit" class="cta" id="edit-save">Enregistrer</button>
+      </footer>
+    </form>
+  </dialog>
 
   <script type="module" src="admin.js"></script>
 </body>

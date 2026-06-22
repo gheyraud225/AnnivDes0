@@ -77,50 +77,11 @@
     <h2 id="programme-title">Le programme</h2>
     <p class="section-lede">Choisissez les moments où vous serez des nôtres — venez pour la journée entière ou juste pour une activité.</p>
 
-    <ol class="timeline">
+    <ol class="timeline" id="timeline">
       <li class="day-marker">
         <h3>Samedi 29 août</h3>
       </li>
-
-      <li class="slot" data-slot="pilates">
-        <div class="slot-time">9h00</div>
-        <div class="slot-body">
-          <h4>Pilates en plein air</h4>
-          <p>Séance douce pour réveiller les corps — tous niveaux, tapis fournis.</p>
-        </div>
-      </li>
-
-      <li class="slot" data-slot="poterie-matin">
-        <div class="slot-time">11h00</div>
-        <div class="slot-body">
-          <h4>Atelier poterie</h4>
-          <p>Mettez les mains dans la terre et repartez avec votre création — débutants bienvenus.</p>
-        </div>
-      </li>
-
-      <li class="slot" data-slot="repas-midi">
-        <div class="slot-time">12h30</div>
-        <div class="slot-body">
-          <h4>Repas du midi</h4>
-          <p>Pause déjeuner conviviale entre les deux ateliers.</p>
-        </div>
-      </li>
-
-      <li class="slot is-full" data-slot="poterie-aprem">
-        <div class="slot-time">14h00</div>
-        <div class="slot-body">
-          <h4>Atelier poterie <span class="full-badge">Complet</span></h4>
-          <p>Deuxième session — toutes les places sont prises.</p>
-        </div>
-      </li>
-
-      <li class="slot" data-slot="repas-soir">
-        <div class="slot-time">19h30</div>
-        <div class="slot-body">
-          <h4>Repas du soir</h4>
-          <p>Grande tablée pour célébrer les six héros de la journée.</p>
-        </div>
-      </li>
+      <!-- Les créneaux sont injectés par script.js à partir de la table activities -->
     </ol>
   </section>
 
@@ -181,26 +142,7 @@
 
         <fieldset class="field activities" aria-labelledby="activities-legend">
           <legend id="activities-legend">À quelles activités participez-vous ?</legend>
-          <label class="check-card">
-            <input type="checkbox" class="activity-choice" value="Pilates (9h00)" />
-            <span><strong>Pilates</strong><em>9h00</em></span>
-          </label>
-          <label class="check-card">
-            <input type="checkbox" class="activity-choice" value="Poterie (11h00)" />
-            <span><strong>Poterie</strong><em>11h00</em></span>
-          </label>
-          <label class="check-card">
-            <input type="checkbox" class="activity-choice" value="Repas du midi (12h30)" />
-            <span><strong>Repas du midi</strong><em>12h30</em></span>
-          </label>
-          <label class="check-card is-locked" title="Cet atelier est complet">
-            <input type="checkbox" class="activity-choice" value="Poterie (14h00)" data-locked="true" disabled />
-            <span><strong>Poterie</strong><em>14h00 · complet</em></span>
-          </label>
-          <label class="check-card">
-            <input type="checkbox" class="activity-choice" value="Repas du soir (19h30)" />
-            <span><strong>Repas du soir</strong><em>19h30</em></span>
-          </label>
+          <!-- Les cases sont injectées par script.js depuis la table activities -->
         </fieldset>
 
         <fieldset class="field companions" aria-labelledby="companions-legend">

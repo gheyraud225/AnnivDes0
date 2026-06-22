@@ -89,6 +89,80 @@ const fullnameInput = $("fullname");
 const dietInput = $("diet");
 const messageInput = $("message");
 const activitiesHost = form.querySelector(".activities");
+const activitiesLegend = activitiesHost.querySelector("legend");
+const timelineHost = $("timeline");
+
+// Liste des activités courantes, [{ id, label, time_label, max_participants, taken, ... }],
+// remplie par loadActivities() avant tout rendu.
+let activitiesData = [];
+const SLOT_COLORS = ["pilates", "poterie-matin", "repas-midi", "poterie-aprem", "repas-soir"];
+
+const canonicalLabel = (a) => a.label + (a.time_label ? " (" + a.time_label + ")" : "");
+const isFull = (a) => a.max_participants != null && a.taken >= a.max_participants;
+
+const loadActivities = async () => {
+  if (!IS_CONFIGURED) return;
+  const { data, error } = await supabase.rpc("list_activities_with_counts");
+  if (error) { console.error(error); activitiesData = []; return; }
+  activitiesData = Array.isArray(data) ? data : [];
+};
+
+const renderTimeline = () => {
+  if (!timelineHost) return;
+  // On garde le day-marker initial (1er enfant), on remplace le reste.
+  Array.from(timelineHost.querySelectorAll(".slot")).forEach((el) => el.remove());
+  activitiesData.forEach((a, idx) => {
+    const full = isFull(a);
+    const slot = SLOT_COLORS[idx % SLOT_COLORS.length];
+    const li = document.createElement("li");
+    li.className = "slot" + (full ? " is-full" : "");
+    li.dataset.slot = slot;
+    li.innerHTML =
+      '<div class="slot-time">' + escapeHtml(a.time_label || "") + "</div>" +
+      '<div class="slot-body"><h4>' + escapeHtml(a.label) +
+        (full ? ' <span class="full-badge">Complet</span>' : "") +
+      "</h4>" +
+      (a.description ? "<p>" + escapeHtml(a.description) + "</p>" : "") +
+      "</div>";
+    timelineHost.appendChild(li);
+  });
+};
+
+const renderActivityChoices = (preselected = []) => {
+  if (!activitiesHost) return;
+  // On vide tout sauf la <legend>
+  Array.from(activitiesHost.querySelectorAll(".check-card, .empty-note")).forEach((el) => el.remove());
+  if (!activitiesData.length) {
+    const p = document.createElement("p");
+    p.className = "empty-note";
+    p.textContent = "Aucune activité disponible pour l'instant.";
+    activitiesHost.appendChild(p);
+    return;
+  }
+  activitiesData.forEach((a) => {
+    const full = isFull(a);
+    const alreadyMine = preselected.includes(a.id);
+    // Verrouillée si pleine, sauf si l'invité y était déjà inscrit
+    // (on lui garde sa place).
+    const locked = full && !alreadyMine;
+    const label = document.createElement("label");
+    label.className = "check-card" + (locked ? " is-locked" : "");
+    if (locked) label.title = "Cette activité est complète";
+    const timeSuffix = a.time_label
+      ? a.time_label + (locked ? " · complet" : "")
+      : (locked ? "complet" : "");
+    label.innerHTML =
+      '<input type="checkbox" class="activity-choice" value="' + escapeHtml(a.id) + '"' +
+        (locked ? ' data-locked="true" disabled' : "") +
+        (alreadyMine ? " checked" : "") + " />" +
+      "<span><strong>" + escapeHtml(a.label) + "</strong>" +
+        (timeSuffix ? "<em>" + escapeHtml(timeSuffix) + "</em>" : "") +
+      "</span>";
+    activitiesHost.appendChild(label);
+  });
+};
+
+const activityById = (id) => activitiesData.find((a) => a.id === id);
 
 const PRESENCE = "presence";
 const presenceRadios = form.querySelectorAll('input[name="' + PRESENCE + '"]');
@@ -130,13 +204,22 @@ const companionActivitiesHost = $("companion-activities");
 const companionCancelBtn = $("companion-cancel-btn");
 const companionCloseBtn = $("companion-cancel");
 
+const labelsFromIds = (ids) =>
+  (ids || [])
+    .map((id) => {
+      const a = activityById(id);
+      return a ? canonicalLabel(a) : null;
+    })
+    .filter(Boolean);
+
 const renderCompanions = () => {
   companionsList.innerHTML = "";
   companions.forEach((c, i) => {
     const li = document.createElement("li");
     li.className = "companion-card";
-    const acts = c.activities.length
-      ? escapeHtml(c.activities.join(", "))
+    const labels = labelsFromIds(c.activities);
+    const acts = labels.length
+      ? escapeHtml(labels.join(", "))
       : "Aucune activité";
     li.innerHTML =
       '<span class="companion-avatar" aria-hidden="true">' + escapeHtml(initials(c.name)) + "</span>" +
@@ -307,11 +390,9 @@ const applyRsvpRow = (row) => {
     r.checked = (row.attending && r.value === "oui") ||
                 (!row.attending && r.value === "non");
   });
-  syncActivitiesState();
   const acts = Array.isArray(row.activities) ? row.activities : [];
-  activitiesHost.querySelectorAll(".activity-choice").forEach((cb) => {
-    cb.checked = acts.includes(cb.value);
-  });
+  renderActivityChoices(acts);
+  syncActivitiesState();
   companions.length = 0;
   const cps = Array.isArray(row.companions) ? row.companions : [];
   cps.forEach((c) => {
@@ -360,6 +441,11 @@ const showRsvp = (email) => {
 };
 
 const loadAndShowConnected = async (session) => {
+  // Rafraîchit la liste d'activités à chaque connexion (l'admin a pu en
+  // ajouter ou changer un max entre-temps).
+  await loadActivities();
+  renderTimeline();
+
   let row = null;
   try {
     row = await fetchMyRsvp();
@@ -367,7 +453,11 @@ const loadAndShowConnected = async (session) => {
     console.error(err);
   }
   isUpdate = !!row;
-  if (row) applyRsvpRow(row);
+  if (row) {
+    applyRsvpRow(row);
+  } else {
+    renderActivityChoices();
+  }
   showRsvp(session.user.email);
 };
 
@@ -506,6 +596,14 @@ form.addEventListener("submit", async (event) => {
     const wasUpdate = isUpdate;
     isUpdate = true; // toute soumission ultérieure sera une mise à jour
     submitButton.textContent = "Mettre à jour ma réponse";
+    // Rafraîchit les compteurs : une activité peut être passée à "complet"
+    // suite à notre propre inscription.
+    await loadActivities();
+    renderTimeline();
+    const myActs = getCheckedActivities();
+    renderActivityChoices(myActs);
+    syncActivitiesState();
+    renderCompanions();
     finishSuccess(wasUpdate);
   } catch (err) {
     console.error(err);
@@ -526,6 +624,11 @@ const init = async () => {
     return;
   }
   try {
+    // Activités d'abord : la timeline et les cases en dépendent.
+    await loadActivities();
+    renderTimeline();
+    renderActivityChoices();
+
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
       await loadAndShowConnected(session);

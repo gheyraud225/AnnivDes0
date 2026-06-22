@@ -82,6 +82,16 @@ table `admins`, la fonction `is_admin()` et `admin_list_rsvps()`). Il reste à
    ```
 3. Ouvre `admin.html`, connecte-toi avec ce compte → le tableau de bord s'affiche.
 
+### Gérer les activités
+
+La section **« Gérer les activités »** du dashboard permet d'ajouter, renommer,
+changer l'heure ou fixer un nombre max de places. Le statut « complet » est
+calculé automatiquement (`taken >= max`) et les invités voient la case grisée
+en direct. Si tu changes une heure ou un nom, les inscriptions existantes
+suivent : les activités sont référencées par un identifiant interne, pas par
+leur libellé. Supprimer une activité ayant des inscriptions est possible (avec
+confirmation) — ces lignes restent en base mais n'apparaissent plus côté front.
+
 > Pour ajouter un autre organisateur : il s'inscrit sur le site, puis tu relances
 > la requête ci-dessus avec son email. Pour retirer un admin :
 > `delete from public.admins where user_id = (select id from auth.users where email = '…');`
