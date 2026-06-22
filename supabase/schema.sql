@@ -269,7 +269,7 @@ end $$;
 create or replace function public.list_activities_with_counts()
 returns table (
   id uuid, label text, time_label text, time_sort int, description text,
-  max_participants int, position int, taken int
+  max_participants int, "position" int, taken int
 )
 language sql security definer set search_path = public stable as $$
   with main_signups as (
