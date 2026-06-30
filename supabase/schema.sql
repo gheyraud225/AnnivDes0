@@ -54,9 +54,13 @@ create policy "rsvps_update_own"
 -- L'organisateur peut supprimer manuellement depuis le dashboard.
 
 -- 3. Trigger updated_at --------------------------------------------------
+-- search_path fixé pour éviter le warning "function_search_path_mutable".
+-- now() reste résolu via pg_catalog (toujours implicitement dans le path).
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
+security invoker
+set search_path = public
 as $$
 begin
   new.updated_at = now();
@@ -318,6 +322,35 @@ language sql security definer set search_path = public stable as $$
 $$;
 
 grant execute on function public.list_activities_with_counts() to authenticated, anon;
+
+-- =====================================================================
+-- 6. Durcissement des permissions (avertissements du linter Supabase)
+--
+-- Postgres accorde par défaut EXECUTE à PUBLIC (= tous les rôles, dont
+-- anon) sur les nouvelles fonctions. On retire ce droit implicite et on
+-- ne ré-accorde qu'au strict nécessaire. AUCUNE donnée n'est touchée.
+-- =====================================================================
+
+-- admin_list_rsvps : renvoie toutes les réponses + emails. Réservée aux
+-- comptes connectés (le filtre interne `where is_admin()` fait que seuls
+-- les admins obtiennent réellement des lignes). On retire anon.
+revoke all on function public.admin_list_rsvps() from public;
+revoke all on function public.admin_list_rsvps() from anon;
+grant execute on function public.admin_list_rsvps() to authenticated;
+
+-- is_admin : anon n'est jamais admin et ne l'appelle jamais (les policies
+-- rsvps/activities sont toutes `to authenticated`). On retire anon.
+revoke all on function public.is_admin() from public;
+revoke all on function public.is_admin() from anon;
+grant execute on function public.is_admin() to authenticated;
+
+-- list_activities_with_counts : reste ouverte à anon ET authenticated —
+-- la timeline du programme s'affiche AVANT connexion sur le site. Elle
+-- n'expose que des infos publiques (programme + compteurs), aucune donnée
+-- personnelle. On retire seulement le PUBLIC redondant et on ré-accorde
+-- explicitement aux deux rôles utiles.
+revoke all on function public.list_activities_with_counts() from public;
+grant execute on function public.list_activities_with_counts() to anon, authenticated;
 
 -- Pour devenir admin (à exécuter une fois, après s'être inscrit sur le site) :
 --   insert into public.admins (user_id)
