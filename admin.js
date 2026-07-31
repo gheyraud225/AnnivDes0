@@ -261,8 +261,11 @@ const renderActivitiesAdmin = () => {
             '<div class="activity-row-label">' + escapeHtml(a.label) + "</div>" +
             '<div class="activity-row-meta">' + meta + "</div>" +
           "</div>" +
-          '<button type="button" class="edit-btn" data-action="edit">Modifier</button>' +
-          '<button type="button" class="delete-btn" data-action="delete">Supprimer</button>' +
+          '<div class="activity-row-actions">' +
+            '<button type="button" class="view-btn" data-action="view">Voir inscrits (' + a.taken + ")</button>" +
+            '<button type="button" class="edit-btn" data-action="edit">Modifier</button>' +
+            '<button type="button" class="delete-btn" data-action="delete">Supprimer</button>' +
+          "</div>" +
         "</div>"
       );
     })
@@ -338,6 +341,66 @@ editForm.addEventListener("submit", async (e) => {
 
 $("add-activity").addEventListener("click", () => openEdit(null));
 
+// ---------- liste des inscrits à une activité -------------------------
+
+const registrantsDialog = $("view-registrants");
+const registrantsTitle = $("registrants-title");
+const registrantsBody = $("registrants-body");
+
+// Renvoie tous les participants (répondants + accompagnants) inscrits à
+// l'activité donnée. rsvpsCache doit être rempli (loadDashboard).
+const registrantsFor = (activityId) => {
+  const list = [];
+  rsvpsCache.forEach((row) => {
+    if (!row.attending) return;
+    if (asActivities(row.activities).includes(activityId)) {
+      list.push({ name: row.full_name || row.email || "—", note: "" });
+    }
+    asCompanions(row.companions).forEach((c) => {
+      if ((c.activities || []).includes(activityId)) {
+        list.push({
+          name: c.name,
+          note: "accompagne " + (row.full_name || row.email || "—"),
+        });
+      }
+    });
+  });
+  list.sort((x, y) => x.name.localeCompare(y.name, "fr"));
+  return list;
+};
+
+const openRegistrants = (a) => {
+  const people = registrantsFor(a.id);
+  registrantsTitle.textContent =
+    a.label + (a.time_label ? " (" + a.time_label + ")" : "");
+  if (!people.length) {
+    registrantsBody.innerHTML = '<p class="empty-note">Personne n\'est encore inscrit à cette activité.</p>';
+  } else {
+    registrantsBody.innerHTML =
+      '<p class="registrants-count">' + people.length +
+        (people.length > 1 ? " personnes inscrites" : " personne inscrite") + "</p>" +
+      '<ol class="registrants-list">' +
+      people
+        .map((p) =>
+          "<li><span>" + escapeHtml(p.name) + "</span>" +
+          (p.note ? '<em class="registrants-note">' + escapeHtml(p.note) + "</em>" : "") +
+          "</li>")
+        .join("") +
+      "</ol>";
+  }
+  if (typeof registrantsDialog.showModal === "function") registrantsDialog.showModal();
+  else registrantsDialog.setAttribute("open", "");
+};
+
+const closeRegistrants = () => {
+  if (typeof registrantsDialog.close === "function" && registrantsDialog.open) registrantsDialog.close();
+  else registrantsDialog.removeAttribute("open");
+};
+
+$("registrants-close").addEventListener("click", closeRegistrants);
+$("registrants-ok").addEventListener("click", closeRegistrants);
+registrantsDialog.addEventListener("click", (e) => { if (e.target === registrantsDialog) closeRegistrants(); });
+
 $("activities-admin").addEventListener("click", async (e) => {
   const btn = e.target.closest("button[data-action]");
   if (!btn) return;
@@ -345,7 +408,9 @@ $("activities-admin").addEventListener("click", async (e) => {
   const id = row && row.dataset.id;
   const a = activitiesCache.find((x) => x.id === id);
   if (!a) return;
-  if (btn.dataset.action === "edit") {
+  if (btn.dataset.action === "view") {
+    openRegistrants(a);
+  } else if (btn.dataset.action === "edit") {
     openEdit(a);
   } else if (btn.dataset.action === "delete") {
     const confirmMsg = a.taken > 0

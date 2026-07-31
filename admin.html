@@ -164,8 +164,8 @@
     .admin-hint { color: var(--ink-soft); font-size: 0.9rem; margin: -0.3rem 0 0.8rem; }
 
     .activity-row {
-      display: grid;
-      grid-template-columns: 1fr auto auto;
+      display: flex;
+      flex-wrap: wrap;
       gap: 0.5rem;
       align-items: center;
       padding: 0.6rem 0.9rem;
@@ -174,7 +174,12 @@
       margin-bottom: 0.5rem;
       box-shadow: 0 8px 20px -16px rgba(34, 34, 59, 0.25);
     }
-    .activity-row-main { min-width: 0; }
+    .activity-row-main { flex: 1 1 11rem; min-width: 0; }
+    .activity-row-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .activity-row .view-btn {
+      background: linear-gradient(120deg, var(--violet), var(--pink));
+      color: white;
+    }
     .activity-row-label { font-weight: 600; word-break: break-word; }
     .activity-row-meta { font-size: 0.82rem; color: var(--ink-soft); margin-top: 0.15rem; }
     .activity-row-meta .full { color: var(--coral); font-weight: 600; }
@@ -282,6 +287,26 @@
       line-height: 1;
     }
 
+    .reg-wrap { display: flex; flex-direction: column; max-height: 80dvh; }
+    .registrants-count {
+      margin: 0 0 0.7rem;
+      font-weight: 600;
+      color: var(--violet);
+    }
+    .registrants-list {
+      margin: 0;
+      padding-left: 1.4rem;
+      display: grid;
+      gap: 0.45rem;
+    }
+    .registrants-list li { line-height: 1.3; }
+    .registrants-note {
+      display: block;
+      font-style: normal;
+      font-size: 0.8rem;
+      color: var(--ink-soft);
+    }
+
     @media (min-width: 560px) {
       .stat-grid { grid-template-columns: repeat(4, 1fr); }
     }
@@ -359,6 +384,19 @@
       <div id="absent-list"></div>
     </section>
   </main>
+
+  <dialog id="view-registrants" class="edit-dialog" aria-labelledby="registrants-title">
+    <div class="reg-wrap">
+      <header>
+        <h3 id="registrants-title">Inscrits</h3>
+        <button type="button" class="link-button" id="registrants-close" aria-label="Fermer">×</button>
+      </header>
+      <div class="body body--scroll" id="registrants-body"></div>
+      <footer>
+        <button type="button" class="cta" id="registrants-ok">Fermer</button>
+      </footer>
+    </div>
+  </dialog>
 
   <dialog id="edit-rsvp" class="edit-dialog" aria-labelledby="edit-rsvp-title">
     <form id="edit-rsvp-form">
