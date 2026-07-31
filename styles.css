@@ -273,6 +273,105 @@ p { margin: 0 0 0.6rem; }
   display: inline-block;
 }
 
+/* ---------- Programme statique : animations + détail ---------- */
+
+.schedule-subtitle {
+  font-family: var(--font-script);
+  font-size: clamp(1.6rem, 5vw, 2rem);
+  color: var(--violet);
+  margin: 1.8rem 0 0.8rem;
+}
+
+.anim-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.5rem;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.anim-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.9rem;
+  padding: 0.6rem 0.9rem;
+  background: var(--paper);
+  border-radius: 12px;
+  box-shadow: 0 8px 20px -16px rgba(34, 34, 59, 0.2);
+}
+
+.anim-time {
+  flex: 0 0 6.6rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--pink);
+}
+
+.anim-name { flex: 1; }
+
+.activity-details {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.activity-detail {
+  background: var(--paper);
+  border-radius: 14px;
+  padding: 1rem 1.2rem;
+  box-shadow: 0 10px 24px -18px rgba(34, 34, 59, 0.3);
+  border-left: 4px solid var(--turquoise);
+}
+
+.activity-detail:nth-child(2n) { border-left-color: var(--pink); }
+.activity-detail:nth-child(3n) { border-left-color: var(--yellow); }
+.activity-detail:nth-child(4n) { border-left-color: var(--violet); }
+.activity-detail:nth-child(5n) { border-left-color: var(--coral); }
+
+.activity-detail-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem 0.8rem;
+  margin-bottom: 0.3rem;
+}
+
+.activity-detail-time {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+  background: var(--paper-2);
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+}
+
+.activity-detail-head h4 { font-size: 1.15rem; }
+
+.activity-detail-loc {
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+  margin: 0 0 0.5rem;
+}
+
+.activity-detail ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.activity-detail li { font-size: 0.95rem; }
+
+.info-wide { grid-column: 1 / -1; }
+
+.info-map {
+  display: block;
+  width: 100%;
+  max-width: 420px;
+  height: auto;
+  border-radius: 12px;
+  margin: 0.6rem 0;
+}
+
 .timeline {
   list-style: none;
   padding: 0;

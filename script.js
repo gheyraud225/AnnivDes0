@@ -90,12 +90,10 @@ const dietInput = $("diet");
 const messageInput = $("message");
 const activitiesHost = form.querySelector(".activities");
 const activitiesLegend = activitiesHost.querySelector("legend");
-const timelineHost = $("timeline");
 
 // Liste des activités courantes, [{ id, label, time_label, max_participants, taken, ... }],
 // remplie par loadActivities() avant tout rendu.
 let activitiesData = [];
-const SLOT_COLORS = ["pilates", "poterie-matin", "repas-midi", "poterie-aprem", "repas-soir"];
 
 const canonicalLabel = (a) => a.label + (a.time_label ? " (" + a.time_label + ")" : "");
 const isFull = (a) => a.max_participants != null && a.taken >= a.max_participants;
@@ -105,27 +103,6 @@ const loadActivities = async () => {
   const { data, error } = await supabase.rpc("list_activities_with_counts");
   if (error) { console.error(error); activitiesData = []; return; }
   activitiesData = Array.isArray(data) ? data : [];
-};
-
-const renderTimeline = () => {
-  if (!timelineHost) return;
-  // On garde le day-marker initial (1er enfant), on remplace le reste.
-  Array.from(timelineHost.querySelectorAll(".slot")).forEach((el) => el.remove());
-  activitiesData.forEach((a, idx) => {
-    const full = isFull(a);
-    const slot = SLOT_COLORS[idx % SLOT_COLORS.length];
-    const li = document.createElement("li");
-    li.className = "slot" + (full ? " is-full" : "");
-    li.dataset.slot = slot;
-    li.innerHTML =
-      '<div class="slot-time">' + escapeHtml(a.time_label || "") + "</div>" +
-      '<div class="slot-body"><h4>' + escapeHtml(a.label) +
-        (full ? ' <span class="full-badge">Complet</span>' : "") +
-      "</h4>" +
-      (a.description ? "<p>" + escapeHtml(a.description) + "</p>" : "") +
-      "</div>";
-    timelineHost.appendChild(li);
-  });
 };
 
 const renderActivityChoices = (preselected = []) => {
@@ -451,7 +428,6 @@ const loadAndShowConnected = async (session) => {
   // Rafraîchit la liste d'activités à chaque connexion (l'admin a pu en
   // ajouter ou changer un max entre-temps).
   await loadActivities();
-  renderTimeline();
 
   let row = null;
   try {
@@ -606,7 +582,6 @@ form.addEventListener("submit", async (event) => {
     // Rafraîchit les compteurs : une activité peut être passée à "complet"
     // suite à notre propre inscription.
     await loadActivities();
-    renderTimeline();
     const myActs = getCheckedActivities();
     renderActivityChoices(myActs);
     syncActivitiesState();
@@ -631,9 +606,9 @@ const init = async () => {
     return;
   }
   try {
-    // Activités d'abord : la timeline et les cases en dépendent.
+    // Charge les activités RSVP (cases à cocher). Le programme affiché
+    // plus haut est statique, indépendant de la base.
     await loadActivities();
-    renderTimeline();
     renderActivityChoices();
 
     const { data: { session } } = await supabase.auth.getSession();
