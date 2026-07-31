@@ -525,6 +525,44 @@ p { margin: 0 0 0.6rem; }
   gap: 1.1rem;
 }
 
+.rsvp-help {
+  background: linear-gradient(135deg, #fff1d6, #ffe3ec);
+  border: 1px dashed rgba(255, 79, 139, 0.35);
+  border-radius: 14px;
+  padding: 1rem 1.2rem;
+}
+
+.rsvp-help h3 {
+  font-size: 1.05rem;
+  margin-bottom: 0.5rem;
+  color: var(--pink);
+}
+
+.rsvp-help ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.rsvp-help li {
+  font-size: 0.92rem;
+  line-height: 1.4;
+  padding-left: 1.3rem;
+  position: relative;
+  color: var(--ink);
+}
+
+.rsvp-help li::before {
+  content: "✦";
+  position: absolute;
+  left: 0;
+  top: 0.05em;
+  color: var(--pink);
+  font-size: 0.85rem;
+}
+
 .field { display: flex; flex-direction: column; gap: 0.4rem; }
 
 .field label,

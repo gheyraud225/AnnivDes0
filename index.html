@@ -209,6 +209,15 @@
       </div>
 
       <form id="rsvp-form">
+        <div class="rsvp-help">
+          <h3>📝 Comment bien s'inscrire</h3>
+          <ul>
+            <li>Cochez d'abord <strong>vos</strong> activités ci-dessous.</li>
+            <li>Vous venez accompagné·e ? Ajoutez <strong>chaque personne séparément avec son prénom</strong> (ex. « Sophie », « Marc ») — pas « Personne 1, Personne 2 ». Chaque accompagnant choisit ensuite ses propres activités.</li>
+            <li>Vous pourrez <strong>modifier votre réponse à tout moment</strong> en vous reconnectant avec le même email et mot de passe.</li>
+          </ul>
+        </div>
+
         <div class="field">
           <label for="fullname">Votre nom complet</label>
           <input type="text" id="fullname" required autocomplete="name" maxlength="80" />
@@ -235,6 +244,7 @@
 
         <fieldset class="field companions" aria-labelledby="companions-legend">
           <legend id="companions-legend">Vous venez accompagné·e ?</legend>
+          <p class="field-hint">Une entrée par personne, avec son vrai prénom. Chaque personne pourra cocher ses propres activités.</p>
           <ul id="companions-list" class="companions-list" aria-live="polite"></ul>
           <p id="companions-empty" class="companions-empty">Aucun accompagnant pour l'instant.</p>
           <button type="button" id="add-companion" class="add-companion">
@@ -266,8 +276,9 @@
 
         <div class="companion-dialog-body">
           <div class="field">
-            <label for="companion-name">Prénom et nom</label>
-            <input type="text" id="companion-name" autocomplete="off" required maxlength="60" placeholder="ex. Sophie Dupont" />
+            <label for="companion-name">Prénom de cette personne</label>
+            <input type="text" id="companion-name" autocomplete="off" required maxlength="60" placeholder="ex. Sophie" />
+            <p class="field-hint">Ajoutez une seule personne ici. Pour d'autres invités, répétez « Ajouter une personne ».</p>
           </div>
 
           <fieldset class="field" aria-labelledby="companion-activities-legend">
