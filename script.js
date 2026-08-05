@@ -344,19 +344,26 @@ const syncCompanionsState = () => {
   }
 };
 
+// Reconstruit les cases de la fenêtre d'accompagnant à partir des données
+// (et non en clonant celles du principal), pour ne PAS hériter des blocages
+// de chevauchement liés aux choix de la personne principale. Chaque
+// accompagnant repart d'une sélection vierge ; seul l'état "complet" (global)
+// est repris.
 const buildCompanionActivities = () => {
   companionActivitiesHost.innerHTML = "";
-  activitiesHost.querySelectorAll(".activity-choice").forEach((src, idx) => {
-    const srcLabel = src.closest(".check-card");
-    const inner = srcLabel ? srcLabel.querySelector("span").innerHTML : src.value;
-    const locked = src.dataset.locked === "true";
+  activitiesData.forEach((a) => {
+    const full = isFull(a);
+    const t = activityTimeText(a);
+    const timeSuffix = t ? t + (full ? " · complet" : "") : (full ? "complet" : "");
     const label = document.createElement("label");
-    label.className = "check-card" + (locked ? " is-locked" : "");
+    label.className = "check-card" + (full ? " is-locked" : "");
+    if (full) label.title = "Cette activité est complète";
     label.innerHTML =
-      '<input type="checkbox" class="activity-choice" data-companion-activity="' + idx + '" value="' +
-        escapeHtml(src.value) + '"' +
-        (locked ? ' data-locked="true" disabled' : "") + " />" +
-      "<span>" + inner + "</span>";
+      '<input type="checkbox" class="activity-choice" value="' + escapeHtml(a.id) + '"' +
+        (full ? ' data-locked="true" disabled' : "") + " />" +
+      "<span><strong>" + escapeHtml(a.label) + "</strong>" +
+        (timeSuffix ? "<em>" + escapeHtml(timeSuffix) + "</em>" : "") +
+      "</span>";
     companionActivitiesHost.appendChild(label);
   });
 };
