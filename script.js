@@ -119,6 +119,23 @@ const rangesOverlap = (a, b) =>
 // Verrouille, dans un conteneur de cases .activity-choice, celles qui
 // chevauchent une activité déjà cochée (et laisse les cases pleines gérées
 // par data-locked). Les cases cochées restent activables pour être décochées.
+// Affiche/retire une petite note explicative dans une carte de case.
+const setOverlapNote = (card, text) => {
+  const span = card && card.querySelector("span");
+  if (!span) return;
+  let note = span.querySelector(".overlap-note");
+  if (text) {
+    if (!note) {
+      note = document.createElement("em");
+      note.className = "overlap-note";
+      span.appendChild(note);
+    }
+    note.textContent = text;
+  } else if (note) {
+    note.remove();
+  }
+};
+
 const applyOverlapLocks = (host) => {
   const boxes = Array.from(host.querySelectorAll(".activity-choice"));
   const chosen = boxes
@@ -130,15 +147,24 @@ const applyOverlapLocks = (host) => {
     const a = activityById(b.value);
     const full = b.dataset.locked === "true";
     if (b.checked) {
-      if (card) card.classList.remove("is-overlap");
+      if (card) { card.classList.remove("is-overlap"); setOverlapNote(card, ""); }
       return;
     }
-    const overlap = hasRange(a) && chosen.some((r) => r.id !== a.id && rangesOverlap(a, r));
+    const conflict = hasRange(a)
+      ? chosen.find((r) => r.id !== a.id && rangesOverlap(a, r))
+      : null;
+    const overlap = !!conflict;
     b.disabled = full || overlap;
     if (card) {
       card.classList.toggle("is-overlap", overlap && !full);
-      if (overlap && !full) card.title = "Chevauche une activité déjà choisie";
-      else if (!full) card.removeAttribute("title");
+      if (overlap && !full) {
+        const msg = "⛔ Chevauche « " + conflict.label + " » que vous avez déjà choisi";
+        card.title = msg;
+        setOverlapNote(card, msg);
+      } else {
+        card.removeAttribute("title");
+        setOverlapNote(card, "");
+      }
     }
   });
 };

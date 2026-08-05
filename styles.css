@@ -677,10 +677,20 @@ fieldset.field {
 
 /* Chevauche une activité déjà cochée : grisée, non sélectionnable. */
 .check-card.is-overlap {
-  opacity: 0.5;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 .check-card.is-overlap input { cursor: not-allowed; }
+
+.overlap-note {
+  display: block;
+  font-style: normal;
+  font-size: 0.78rem;
+  line-height: 1.25;
+  color: var(--coral);
+  font-weight: 600;
+  margin-top: 0.2rem;
+}
 
 .check-card span {
   display: flex;
