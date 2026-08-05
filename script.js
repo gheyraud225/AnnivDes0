@@ -213,6 +213,34 @@ const renderActivityChoices = (preselected = []) => {
 
 const activityById = (id) => activitiesData.find((a) => a.id === id);
 
+// --- Programme statique : on met à jour SEULEMENT l'heure de chaque carte
+//     (.activity-detail-time) depuis la base. Le reste reste écrit en dur.
+//     Lien carte <-> activité par data-activity == label (insensible à la
+//     casse ; pour un label présent plusieurs fois, on associe dans l'ordre).
+//     Sans correspondance en base, l'heure écrite en dur est conservée.
+const updateProgrammeTimes = () => {
+  const cards = document.querySelectorAll(".activity-detail[data-activity]");
+  if (!cards.length || !activitiesData.length) return;
+  const byLabel = new Map();
+  activitiesData.forEach((a) => {
+    const k = (a.label || "").trim().toLowerCase();
+    if (!byLabel.has(k)) byLabel.set(k, []);
+    byLabel.get(k).push(a);
+  });
+  const cursor = new Map();
+  cards.forEach((card) => {
+    const k = (card.dataset.activity || "").trim().toLowerCase();
+    const list = byLabel.get(k);
+    if (!list || !list.length) return;
+    const i = cursor.get(k) || 0;
+    const a = list[Math.min(i, list.length - 1)];
+    cursor.set(k, i + 1);
+    const t = activityTimeText(a);
+    const el = card.querySelector(".activity-detail-time");
+    if (t && el) el.textContent = t;
+  });
+};
+
 const PRESENCE = "presence";
 const presenceRadios = form.querySelectorAll('input[name="' + PRESENCE + '"]');
 
@@ -696,10 +724,10 @@ const init = async () => {
     return;
   }
   try {
-    // Charge les activités RSVP (cases à cocher). Le programme affiché
-    // plus haut est statique, indépendant de la base.
+    // Charge les activités (cases à cocher RSVP + heures du programme).
     await loadActivities();
     renderActivityChoices();
+    updateProgrammeTimes(); // met à jour uniquement les heures du programme
 
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {

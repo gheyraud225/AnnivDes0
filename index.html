@@ -94,8 +94,11 @@
     </ul>
 
     <h3 class="schedule-subtitle">📋 Le détail des activités</h3>
+    <!-- Contenu statique. Seule l'heure (.activity-detail-time) est mise à jour
+         dynamiquement par script.js, en liant chaque carte à une activité de la
+         base via data-activity (le nom doit correspondre à celui de l'admin). -->
     <div class="activity-details">
-      <article class="activity-detail activity-detail--turquoise">
+      <article class="activity-detail activity-detail--turquoise" data-activity="Pilates">
         <div class="activity-detail-head">
           <span class="activity-detail-time">09h00 – 10h00</span>
           <h4>🧘 Pilates</h4>
@@ -108,7 +111,7 @@
         </ul>
       </article>
 
-      <article class="activity-detail activity-detail--pink">
+      <article class="activity-detail activity-detail--pink" data-activity="Atelier poterie">
         <div class="activity-detail-head">
           <span class="activity-detail-time">11h00 – 12h00</span>
           <h4>🏺 Atelier poterie</h4>
@@ -120,7 +123,7 @@
         </ul>
       </article>
 
-      <article class="activity-detail activity-detail--yellow">
+      <article class="activity-detail activity-detail--yellow" data-activity="Début du tournoi de padel">
         <div class="activity-detail-head">
           <span class="activity-detail-time">14h00</span>
           <h4>🎾 Début du tournoi de padel</h4>
@@ -134,7 +137,7 @@
         </ul>
       </article>
 
-      <article class="activity-detail activity-detail--violet">
+      <article class="activity-detail activity-detail--violet" data-activity="Atelier poterie">
         <div class="activity-detail-head">
           <span class="activity-detail-time">14h00 – 15h00</span>
           <h4>🏺 Atelier poterie</h4>
@@ -146,7 +149,7 @@
         </ul>
       </article>
 
-      <article class="activity-detail activity-detail--coral">
+      <article class="activity-detail activity-detail--coral" data-activity="Chasse au trésor des enfants">
         <div class="activity-detail-head">
           <span class="activity-detail-time">15h00 – 16h30</span>
           <h4>🗺️ Chasse au trésor des enfants</h4>
@@ -160,7 +163,7 @@
         </ul>
       </article>
 
-      <article class="activity-detail activity-detail--turquoise">
+      <article class="activity-detail activity-detail--turquoise" data-activity="Création de bracelets">
         <div class="activity-detail-head">
           <span class="activity-detail-time">15h30 – 17h30</span>
           <h4>📿 Création de bracelets</h4>
