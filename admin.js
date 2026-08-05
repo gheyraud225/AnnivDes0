@@ -224,16 +224,6 @@ const activityLabel = (id) => {
   return a ? (a.label + (a.time_label ? " (" + a.time_label + ")" : "")) : null;
 };
 
-const parseTimeSort = (s) => {
-  if (!s) return 9999;
-  const m = /^\s*(\d{1,2})\s*[h:.]\s*(\d{0,2})\s*$/i.exec(s);
-  if (!m) return 9999;
-  const h = parseInt(m[1], 10);
-  const min = m[2] ? parseInt(m[2], 10) : 0;
-  if (Number.isNaN(h) || Number.isNaN(min)) return 9999;
-  return h * 60 + min;
-};
-
 const loadActivities = async () => {
   const { data, error } = await supabase.rpc("list_activities_with_counts");
   if (error) { console.error(error); activitiesCache = []; return; }
@@ -272,11 +262,24 @@ const renderActivitiesAdmin = () => {
     .join("");
 };
 
+// Minutes <-> formats
+const minToHHMM = (m) =>
+  m == null ? "" : String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
+const hhmmToMin = (s) => {
+  const m = /^(\d{1,2}):(\d{2})$/.exec((s || "").trim());
+  return m ? (+m[1]) * 60 + (+m[2]) : null;
+};
+const minToFR = (m) => {
+  if (m == null) return "";
+  return Math.floor(m / 60) + "h" + String(m % 60).padStart(2, "0");
+};
+
 // Dialogue d'édition (création + modification)
 const editDialog = $("edit-activity");
 const editForm = $("edit-activity-form");
 const editLabel = $("edit-label");
-const editTime = $("edit-time");
+const editStart = $("edit-start");
+const editEnd = $("edit-end");
 const editMax = $("edit-max");
 const editDesc = $("edit-desc");
 const editStatus = $("edit-status");
@@ -287,7 +290,10 @@ const openEdit = (a) => {
   editingId = a ? a.id : null;
   editTitle.textContent = a ? "Modifier l'activité" : "Ajouter une activité";
   editLabel.value = a ? a.label : "";
-  editTime.value = a ? a.time_label : "";
+  // début : start_min si connu, sinon time_sort (rétro-compat)
+  const startMin = a ? (a.start_min != null ? a.start_min : (a.time_sort !== 9999 ? a.time_sort : null)) : null;
+  editStart.value = minToHHMM(startMin);
+  editEnd.value = a ? minToHHMM(a.end_min) : "";
   editMax.value = a && a.max_participants != null ? String(a.max_participants) : "";
   editDesc.value = a ? (a.description || "") : "";
   setStatus(editStatus, "", "");
@@ -308,14 +314,26 @@ editForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const label = editLabel.value.trim().slice(0, 80);
   if (!label) { editLabel.focus(); return; }
-  const time = editTime.value.trim().slice(0, 10);
+  const startMin = hhmmToMin(editStart.value);
+  const endMin = hhmmToMin(editEnd.value);
+  if (startMin != null && endMin != null && endMin <= startMin) {
+    setStatus(editStatus, "error", "L'heure de fin doit être après l'heure de début.");
+    return;
+  }
   const maxRaw = editMax.value.trim();
   const max = maxRaw === "" ? null : Math.max(0, parseInt(maxRaw, 10) || 0);
   const desc = editDesc.value.trim().slice(0, 300) || null;
+  // Libellé horaire auto-généré à partir des heures saisies.
+  const timeLabel =
+    startMin != null
+      ? minToFR(startMin) + (endMin != null ? " – " + minToFR(endMin) : "")
+      : "";
   const payload = {
     label,
-    time_label: time,
-    time_sort: parseTimeSort(time),
+    time_label: timeLabel,
+    time_sort: startMin != null ? startMin : 9999,
+    start_min: startMin,
+    end_min: endMin,
     max_participants: max,
     description: desc,
   };

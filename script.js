@@ -98,6 +98,39 @@ let activitiesData = [];
 const canonicalLabel = (a) => a.label + (a.time_label ? " (" + a.time_label + ")" : "");
 const isFull = (a) => a.max_participants != null && a.taken >= a.max_participants;
 
+// Plage horaire définie ? (début + fin cohérents)
+const hasRange = (a) => a && a.start_min != null && a.end_min != null && a.end_min > a.start_min;
+// Deux activités se chevauchent-elles dans le temps ?
+const rangesOverlap = (a, b) =>
+  hasRange(a) && hasRange(b) && a.start_min < b.end_min && b.start_min < a.end_min;
+
+// Verrouille, dans un conteneur de cases .activity-choice, celles qui
+// chevauchent une activité déjà cochée (et laisse les cases pleines gérées
+// par data-locked). Les cases cochées restent activables pour être décochées.
+const applyOverlapLocks = (host) => {
+  const boxes = Array.from(host.querySelectorAll(".activity-choice"));
+  const chosen = boxes
+    .filter((b) => b.checked)
+    .map((b) => activityById(b.value))
+    .filter((a) => hasRange(a));
+  boxes.forEach((b) => {
+    const card = b.closest(".check-card");
+    const a = activityById(b.value);
+    const full = b.dataset.locked === "true";
+    if (b.checked) {
+      if (card) card.classList.remove("is-overlap");
+      return;
+    }
+    const overlap = hasRange(a) && chosen.some((r) => r.id !== a.id && rangesOverlap(a, r));
+    b.disabled = full || overlap;
+    if (card) {
+      card.classList.toggle("is-overlap", overlap && !full);
+      if (overlap && !full) card.title = "Chevauche une activité déjà choisie";
+      else if (!full) card.removeAttribute("title");
+    }
+  });
+};
+
 const loadActivities = async () => {
   if (!IS_CONFIGURED) return;
   const { data, error } = await supabase.rpc("list_activities_with_counts");
@@ -157,15 +190,25 @@ const getCheckedActivities = () =>
 
 const syncActivitiesState = () => {
   const off = isNotComing();
-  activitiesHost.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
-    const locked = cb.dataset.locked === "true";
-    cb.disabled = off || locked;
-    // Décocher quand on dit "Non" ; garder la case si elle est verrouillée
-    // (un invité déjà inscrit à une activité complète conserve sa place).
-    if (off) cb.checked = false;
-  });
-  activitiesHost.style.opacity = off ? 0.5 : 1;
+  if (off) {
+    activitiesHost.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+      cb.disabled = true;
+      cb.checked = false;
+    });
+    activitiesHost.querySelectorAll(".check-card.is-overlap").forEach((c) => c.classList.remove("is-overlap"));
+    activitiesHost.style.opacity = 0.5;
+    return;
+  }
+  activitiesHost.style.opacity = 1;
+  applyOverlapLocks(activitiesHost);
 };
+
+// Recalcule les verrous de chevauchement à chaque coche/décoche.
+activitiesHost.addEventListener("change", (e) => {
+  if (e.target.classList && e.target.classList.contains("activity-choice")) {
+    applyOverlapLocks(activitiesHost);
+  }
+});
 
 // ---------- accompagnants --------------------------------------------
 
@@ -232,12 +275,20 @@ const buildCompanionActivities = () => {
     const label = document.createElement("label");
     label.className = "check-card" + (locked ? " is-locked" : "");
     label.innerHTML =
-      '<input type="checkbox" data-companion-activity="' + idx + '" value="' +
-        escapeHtml(src.value) + '"' + (locked ? " disabled" : "") + " />" +
+      '<input type="checkbox" class="activity-choice" data-companion-activity="' + idx + '" value="' +
+        escapeHtml(src.value) + '"' +
+        (locked ? ' data-locked="true" disabled' : "") + " />" +
       "<span>" + inner + "</span>";
     companionActivitiesHost.appendChild(label);
   });
 };
+
+// Chevauchements dans la fenêtre d'accompagnant.
+companionActivitiesHost.addEventListener("change", (e) => {
+  if (e.target.classList && e.target.classList.contains("activity-choice")) {
+    applyOverlapLocks(companionActivitiesHost);
+  }
+});
 
 const openCompanionDialog = () => {
   if (isNotComing()) return;

@@ -182,6 +182,17 @@ create table if not exists public.activities (
   updated_at       timestamptz not null default now()
 );
 
+-- Plage horaire (minutes depuis minuit) pour détecter les chevauchements.
+-- Ajout non destructif : les lignes existantes prennent NULL.
+alter table public.activities add column if not exists start_min int;
+alter table public.activities add column if not exists end_min   int;
+
+-- Pré-remplit le début à partir de time_sort quand il est connu (safe : ne
+-- touche que les valeurs encore nulles). end_min reste à renseigner par l'admin.
+update public.activities
+  set start_min = time_sort
+  where start_min is null and time_sort is not null and time_sort <> 9999;
+
 alter table public.activities enable row level security;
 
 drop policy if exists "activities_select_all" on public.activities;
@@ -283,10 +294,13 @@ end $$;
 -- 5.3 Lecture des activités + compte d'inscriptions en cours
 --     (répondant principal + accompagnants). Disponible à tous les invités
 --     authentifiés pour pouvoir griser une activité pleine côté front.
+-- La signature évolue (ajout de start_min/end_min) : on drop d'abord pour
+-- pouvoir la recréer sans erreur "cannot change return type".
+drop function if exists public.list_activities_with_counts();
 create or replace function public.list_activities_with_counts()
 returns table (
   id uuid, label text, time_label text, time_sort int, description text,
-  max_participants int, "position" int, taken int
+  max_participants int, "position" int, start_min int, end_min int, taken int
 )
 language sql security definer set search_path = public stable as $$
   with main_signups as (
@@ -314,7 +328,7 @@ language sql security definer set search_path = public stable as $$
   )
   select
     a.id, a.label, a.time_label, a.time_sort, a.description,
-    a.max_participants, a.position,
+    a.max_participants, a.position, a.start_min, a.end_min,
     coalesce(c.taken, 0) as taken
   from public.activities a
   left join counts c on c.activity_id = a.id::text

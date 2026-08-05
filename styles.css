@@ -675,6 +675,13 @@ fieldset.field {
 }
 .check-card.is-locked:has(input:checked) em { color: var(--ink-soft); font-weight: normal; }
 
+/* Chevauche une activité déjà cochée : grisée, non sélectionnable. */
+.check-card.is-overlap {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.check-card.is-overlap input { cursor: not-allowed; }
+
 .check-card span {
   display: flex;
   flex-direction: column;
