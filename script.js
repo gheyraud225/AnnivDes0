@@ -110,11 +110,22 @@ const canonicalLabel = (a) => {
 };
 const isFull = (a) => a.max_participants != null && a.taken >= a.max_participants;
 
-// Plage horaire définie ? (début + fin cohérents)
-const hasRange = (a) => a && a.start_min != null && a.end_min != null && a.end_min > a.start_min;
-// Deux activités se chevauchent-elles dans le temps ?
-const rangesOverlap = (a, b) =>
-  hasRange(a) && hasRange(b) && a.start_min < b.end_min && b.start_min < a.end_min;
+// Activité positionnée dans le temps ? (au moins une heure de début)
+const isPositioned = (a) => a && a.start_min != null;
+// Deux activités entrent-elles en conflit horaire ?
+// Une activité sans fin est traitée comme un instant (son heure de début) :
+// elle entre en conflit si ce moment tombe dans l'intervalle [début, fin[ de
+// l'autre. Deux plages qui se touchent (l'une finit quand l'autre commence)
+// ne sont PAS en conflit.
+const conflictsInTime = (a, b) => {
+  if (!isPositioned(a) || !isPositioned(b)) return false;
+  const aPoint = a.end_min == null;
+  const bPoint = b.end_min == null;
+  if (aPoint && bPoint) return a.start_min === b.start_min;
+  if (aPoint) return a.start_min >= b.start_min && a.start_min < b.end_min;
+  if (bPoint) return b.start_min >= a.start_min && b.start_min < a.end_min;
+  return a.start_min < b.end_min && b.start_min < a.end_min;
+};
 
 // Verrouille, dans un conteneur de cases .activity-choice, celles qui
 // chevauchent une activité déjà cochée (et laisse les cases pleines gérées
@@ -141,7 +152,7 @@ const applyOverlapLocks = (host) => {
   const chosen = boxes
     .filter((b) => b.checked)
     .map((b) => activityById(b.value))
-    .filter((a) => hasRange(a));
+    .filter((a) => isPositioned(a));
   boxes.forEach((b) => {
     const card = b.closest(".check-card");
     const a = activityById(b.value);
@@ -150,8 +161,8 @@ const applyOverlapLocks = (host) => {
       if (card) { card.classList.remove("is-overlap"); setOverlapNote(card, ""); }
       return;
     }
-    const conflict = hasRange(a)
-      ? chosen.find((r) => r.id !== a.id && rangesOverlap(a, r))
+    const conflict = isPositioned(a)
+      ? chosen.find((r) => r.id !== a.id && conflictsInTime(a, r))
       : null;
     const overlap = !!conflict;
     b.disabled = full || overlap;
