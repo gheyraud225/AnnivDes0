@@ -218,10 +218,22 @@ const renderAbsent = (absent) => {
 
 // ---------- activités : CRUD + cache local ----------------------------
 
-let activitiesCache = []; // [{ id, label, time_label, time_sort, description, max_participants, taken, ... }]
+let activitiesCache = []; // [{ id, label, time_label, time_sort, description, max_participants, taken, start_min, end_min }]
+
+// Heure affichée dérivée de start_min / end_min (repli sur le libellé texte).
+const minFR = (m) => Math.floor(m / 60) + "h" + String(m % 60).padStart(2, "0");
+const activityTimeText = (a) => {
+  if (!a) return "";
+  if (a.start_min != null && a.end_min != null) return minFR(a.start_min) + " – " + minFR(a.end_min);
+  if (a.start_min != null) return minFR(a.start_min);
+  return a.time_label || "";
+};
+
 const activityLabel = (id) => {
   const a = activitiesCache.find((x) => x.id === id);
-  return a ? (a.label + (a.time_label ? " (" + a.time_label + ")" : "")) : null;
+  if (!a) return null;
+  const t = activityTimeText(a);
+  return a.label + (t ? " (" + t + ")" : "");
 };
 
 const loadActivities = async () => {
@@ -239,8 +251,9 @@ const renderActivitiesAdmin = () => {
   host.innerHTML = activitiesCache
     .map((a) => {
       const max = a.max_participants;
+      const t = activityTimeText(a);
       const meta =
-        (a.time_label ? a.time_label + " · " : "") +
+        (t ? t + " · " : "") +
         (max == null
           ? a.taken + " inscrit" + (a.taken > 1 ? "s" : "") + " (illimité)"
           : a.taken + "/" + max +
@@ -389,8 +402,7 @@ const registrantsFor = (activityId) => {
 
 const openRegistrants = (a) => {
   const people = registrantsFor(a.id);
-  registrantsTitle.textContent =
-    a.label + (a.time_label ? " (" + a.time_label + ")" : "");
+  registrantsTitle.textContent = activityLabel(a.id) || a.label;
   if (!people.length) {
     registrantsBody.innerHTML = '<p class="empty-note">Personne n\'est encore inscrit à cette activité.</p>';
   } else {
@@ -520,7 +532,7 @@ const renderRsvpActivities = (selectedIds) => {
     label.innerHTML =
       '<input type="checkbox" data-activity-id="' + escapeHtml(a.id) + '"' + checked + " />" +
       "<span><strong>" + escapeHtml(a.label) + "</strong>" +
-        (a.time_label ? "<em>" + escapeHtml(a.time_label) + "</em>" : "") +
+        (activityTimeText(a) ? "<em>" + escapeHtml(activityTimeText(a)) + "</em>" : "") +
       "</span>";
     rsvpActivitiesHost.appendChild(label);
   });
@@ -655,7 +667,7 @@ const renderCompActivities = (selectedIds) => {
     label.innerHTML =
       '<input type="checkbox" data-activity-id="' + escapeHtml(a.id) + '"' + checked + " />" +
       "<span><strong>" + escapeHtml(a.label) + "</strong>" +
-        (a.time_label ? "<em>" + escapeHtml(a.time_label) + "</em>" : "") +
+        (activityTimeText(a) ? "<em>" + escapeHtml(activityTimeText(a)) + "</em>" : "") +
       "</span>";
     compActivitiesHost.appendChild(label);
   });

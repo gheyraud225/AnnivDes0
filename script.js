@@ -95,7 +95,19 @@ const activitiesLegend = activitiesHost.querySelector("legend");
 // remplie par loadActivities() avant tout rendu.
 let activitiesData = [];
 
-const canonicalLabel = (a) => a.label + (a.time_label ? " (" + a.time_label + ")" : "");
+// Heure affichée d'une activité : dérivée de start_min / end_min (source de
+// vérité), avec repli sur l'ancien libellé texte. Pas de fin -> juste le début.
+const minToFR = (m) => Math.floor(m / 60) + "h" + String(m % 60).padStart(2, "0");
+const activityTimeText = (a) => {
+  if (a.start_min != null && a.end_min != null) return minToFR(a.start_min) + " – " + minToFR(a.end_min);
+  if (a.start_min != null) return minToFR(a.start_min);
+  return a.time_label || "";
+};
+
+const canonicalLabel = (a) => {
+  const t = activityTimeText(a);
+  return a.label + (t ? " (" + t + ")" : "");
+};
 const isFull = (a) => a.max_participants != null && a.taken >= a.max_participants;
 
 // Plage horaire définie ? (début + fin cohérents)
@@ -158,8 +170,9 @@ const renderActivityChoices = (preselected = []) => {
     const label = document.createElement("label");
     label.className = "check-card" + (locked ? " is-locked" : "");
     if (locked) label.title = "Cette activité est complète";
-    const timeSuffix = a.time_label
-      ? a.time_label + (locked ? " · complet" : "")
+    const t = activityTimeText(a);
+    const timeSuffix = t
+      ? t + (locked ? " · complet" : "")
       : (locked ? "complet" : "");
     label.innerHTML =
       '<input type="checkbox" class="activity-choice" value="' + escapeHtml(a.id) + '"' +
