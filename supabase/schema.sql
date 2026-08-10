@@ -337,6 +337,80 @@ $$;
 
 grant execute on function public.list_activities_with_counts() to authenticated, anon;
 
+-- 5.4 Garde-fou serveur : respect du nombre max de places.
+--     L'interface empêche déjà de dépasser, mais elle peut travailler sur des
+--     compteurs périmés (deux invités qui répondent en même temps) ou être
+--     contournée. Ce trigger est la seule garantie réelle.
+--     Les admins ne sont pas bridés (surbooking manuel possible).
+create or replace function public.check_activity_capacity()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_rec record;
+begin
+  if public.is_admin() then
+    return new;
+  end if;
+  if new.attending is not true then
+    return new;
+  end if;
+
+  for v_rec in
+    with new_signups as (
+      select jsonb_array_elements_text(new.activities) as activity_id
+      union all
+      select jsonb_array_elements_text(c.value->'activities')
+      from jsonb_array_elements(coalesce(new.companions, '[]'::jsonb)) c
+    ),
+    new_counts as (
+      select activity_id, count(*)::int as n
+      from new_signups
+      where activity_id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+      group by activity_id
+    ),
+    other_signups as (
+      select jsonb_array_elements_text(r.activities) as activity_id
+      from public.rsvps r
+      where r.attending = true and r.id <> new.id
+      union all
+      select jsonb_array_elements_text(c.value->'activities')
+      from public.rsvps r
+      cross join lateral jsonb_array_elements(coalesce(r.companions, '[]'::jsonb)) c
+      where r.attending = true and r.id <> new.id
+    ),
+    other_counts as (
+      select activity_id, count(*)::int as n
+      from other_signups
+      group by activity_id
+    )
+    select a.label, a.max_participants,
+           nc.n + coalesce(oc.n, 0) as total
+    from new_counts nc
+    join public.activities a on a.id::text = nc.activity_id
+    left join other_counts oc on oc.activity_id = nc.activity_id
+    where a.max_participants is not null
+      and nc.n + coalesce(oc.n, 0) > a.max_participants
+    limit 1
+  loop
+    raise exception
+      'Plus assez de places pour « % » (% demandées, % au maximum).',
+      v_rec.label, v_rec.total, v_rec.max_participants
+      using errcode = 'check_violation';
+  end loop;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists check_rsvps_capacity on public.rsvps;
+create trigger check_rsvps_capacity
+  before insert or update on public.rsvps
+  for each row
+  execute function public.check_activity_capacity();
+
 -- =====================================================================
 -- 6. Durcissement des permissions (avertissements du linter Supabase)
 --

@@ -108,7 +108,46 @@ const canonicalLabel = (a) => {
   const t = activityTimeText(a);
   return a.label + (t ? " (" + t + ")" : "");
 };
-const isFull = (a) => a.max_participants != null && a.taken >= a.max_participants;
+// --- Capacité ----------------------------------------------------------
+// a.taken vient de la base et inclut MES propres inscriptions déjà
+// enregistrées. Comme mon nouvel envoi les remplace, il faut les retrancher
+// pour connaître les places réellement occupées par les AUTRES, puis y
+// ajouter ce que ma réponse en cours consomme (moi + mes accompagnants).
+let savedMineCounts = new Map();
+
+const countMineSaved = (row) => {
+  const m = new Map();
+  const add = (id) => { if (id) m.set(id, (m.get(id) || 0) + 1); };
+  if (row && row.attending) {
+    (Array.isArray(row.activities) ? row.activities : []).forEach(add);
+    (Array.isArray(row.companions) ? row.companions : []).forEach((c) => {
+      (Array.isArray(c && c.activities) ? c.activities : []).forEach(add);
+    });
+  }
+  return m;
+};
+
+const takenByOthers = (a) => Math.max(0, (a.taken || 0) - (savedMineCounts.get(a.id) || 0));
+
+// Places consommées par les accompagnants déjà ajoutés dans cette session.
+const companionsCount = (activityId) =>
+  companions.reduce((n, c) => n + ((c.activities || []).includes(activityId) ? 1 : 0), 0);
+
+// Le répondant principal a-t-il coché cette activité ?
+const mainCount = (activityId) => {
+  const cb = activitiesHost.querySelector('.activity-choice[value="' + activityId + '"]');
+  return cb && cb.checked ? 1 : 0;
+};
+
+// Occupation "hors conteneur" selon le contexte d'édition.
+const externalForMain = (id) => {
+  const a = activityById(id);
+  return (a ? takenByOthers(a) : 0) + companionsCount(id);
+};
+const externalForCompanion = (id) => {
+  const a = activityById(id);
+  return (a ? takenByOthers(a) : 0) + mainCount(id) + companionsCount(id);
+};
 
 // Activité positionnée dans le temps ? (au moins une heure de début)
 const isPositioned = (a) => a && a.start_min != null;
@@ -147,37 +186,59 @@ const setOverlapNote = (card, text) => {
   }
 };
 
-const applyOverlapLocks = (host) => {
+// Applique les verrous d'une liste de cases : complet (capacité) puis
+// chevauchement horaire. externalUsed(id) = places déjà prises en dehors de
+// ce conteneur (autres invités + le reste de ma réponse).
+// Une case cochée reste toujours activable, pour pouvoir la décocher.
+const applyChoiceLocks = (host, externalUsed) => {
   const boxes = Array.from(host.querySelectorAll(".activity-choice"));
   const chosen = boxes
     .filter((b) => b.checked)
     .map((b) => activityById(b.value))
     .filter((a) => isPositioned(a));
+
   boxes.forEach((b) => {
     const card = b.closest(".check-card");
     const a = activityById(b.value);
-    const full = b.dataset.locked === "true";
+    if (!card || !a) return;
+
     if (b.checked) {
-      if (card) { card.classList.remove("is-overlap"); setOverlapNote(card, ""); }
+      b.disabled = false;
+      card.classList.remove("is-locked", "is-overlap");
+      card.removeAttribute("title");
+      setOverlapNote(card, "");
       return;
     }
+
+    const noRoom =
+      a.max_participants != null && externalUsed(a.id) >= a.max_participants;
     const conflict = isPositioned(a)
       ? chosen.find((r) => r.id !== a.id && conflictsInTime(a, r))
       : null;
-    const overlap = !!conflict;
-    b.disabled = full || overlap;
-    if (card) {
-      card.classList.toggle("is-overlap", overlap && !full);
-      if (overlap && !full) {
-        const msg = "⛔ Chevauche « " + conflict.label + " » que vous avez déjà choisi";
-        card.title = msg;
-        setOverlapNote(card, msg);
-      } else {
-        card.removeAttribute("title");
-        setOverlapNote(card, "");
-      }
+
+    b.disabled = noRoom || !!conflict;
+    card.classList.toggle("is-locked", noRoom);
+    card.classList.toggle("is-overlap", !noRoom && !!conflict);
+
+    if (noRoom) {
+      card.title = "Cette activité est complète";
+      setOverlapNote(card, "⛔ Complet — plus de place disponible");
+    } else if (conflict) {
+      const msg = "⛔ Chevauche « " + conflict.label + " » que vous avez déjà choisi";
+      card.title = msg;
+      setOverlapNote(card, msg);
+    } else {
+      card.removeAttribute("title");
+      setOverlapNote(card, "");
     }
   });
+};
+
+// Rafraîchit les verrous du formulaire principal (appelé quand la liste
+// d'accompagnants change : ils consomment les mêmes places).
+const refreshMainLocks = () => {
+  if (isNotComing()) return;
+  applyChoiceLocks(activitiesHost, externalForMain);
 };
 
 const loadActivities = async () => {
@@ -198,28 +259,22 @@ const renderActivityChoices = (preselected = []) => {
     activitiesHost.appendChild(p);
     return;
   }
+  // L'état "complet" / "chevauchement" est calculé par applyChoiceLocks,
+  // pas figé ici : il dépend aussi des accompagnants ajoutés en cours de route.
   activitiesData.forEach((a) => {
-    const full = isFull(a);
     const alreadyMine = preselected.includes(a.id);
-    // Verrouillée si pleine, sauf si l'invité y était déjà inscrit
-    // (on lui garde sa place).
-    const locked = full && !alreadyMine;
-    const label = document.createElement("label");
-    label.className = "check-card" + (locked ? " is-locked" : "");
-    if (locked) label.title = "Cette activité est complète";
     const t = activityTimeText(a);
-    const timeSuffix = t
-      ? t + (locked ? " · complet" : "")
-      : (locked ? "complet" : "");
+    const label = document.createElement("label");
+    label.className = "check-card";
     label.innerHTML =
       '<input type="checkbox" class="activity-choice" value="' + escapeHtml(a.id) + '"' +
-        (locked ? ' data-locked="true" disabled' : "") +
         (alreadyMine ? " checked" : "") + " />" +
       "<span><strong>" + escapeHtml(a.label) + "</strong>" +
-        (timeSuffix ? "<em>" + escapeHtml(timeSuffix) + "</em>" : "") +
+        (t ? "<em>" + escapeHtml(t) + "</em>" : "") +
       "</span>";
     activitiesHost.appendChild(label);
   });
+  refreshMainLocks();
 };
 
 const activityById = (id) => activitiesData.find((a) => a.id === id);
@@ -273,18 +328,21 @@ const syncActivitiesState = () => {
       cb.disabled = true;
       cb.checked = false;
     });
-    activitiesHost.querySelectorAll(".check-card.is-overlap").forEach((c) => c.classList.remove("is-overlap"));
+    activitiesHost.querySelectorAll(".check-card").forEach((c) => {
+      c.classList.remove("is-overlap", "is-locked");
+      setOverlapNote(c, "");
+    });
     activitiesHost.style.opacity = 0.5;
     return;
   }
   activitiesHost.style.opacity = 1;
-  applyOverlapLocks(activitiesHost);
+  applyChoiceLocks(activitiesHost, externalForMain);
 };
 
-// Recalcule les verrous de chevauchement à chaque coche/décoche.
+// Recalcule capacité + chevauchements à chaque coche/décoche.
 activitiesHost.addEventListener("change", (e) => {
   if (e.target.classList && e.target.classList.contains("activity-choice")) {
-    applyOverlapLocks(activitiesHost);
+    applyChoiceLocks(activitiesHost, externalForMain);
   }
 });
 
@@ -333,6 +391,8 @@ const renderCompanions = () => {
     companionsList.appendChild(li);
   });
   companionsEmpty.hidden = companions.length > 0;
+  // Les accompagnants consomment les mêmes places que moi : on recalcule.
+  refreshMainLocks();
 };
 
 const syncCompanionsState = () => {
@@ -352,26 +412,24 @@ const syncCompanionsState = () => {
 const buildCompanionActivities = () => {
   companionActivitiesHost.innerHTML = "";
   activitiesData.forEach((a) => {
-    const full = isFull(a);
     const t = activityTimeText(a);
-    const timeSuffix = t ? t + (full ? " · complet" : "") : (full ? "complet" : "");
     const label = document.createElement("label");
-    label.className = "check-card" + (full ? " is-locked" : "");
-    if (full) label.title = "Cette activité est complète";
+    label.className = "check-card";
     label.innerHTML =
-      '<input type="checkbox" class="activity-choice" value="' + escapeHtml(a.id) + '"' +
-        (full ? ' data-locked="true" disabled' : "") + " />" +
+      '<input type="checkbox" class="activity-choice" value="' + escapeHtml(a.id) + '" />' +
       "<span><strong>" + escapeHtml(a.label) + "</strong>" +
-        (timeSuffix ? "<em>" + escapeHtml(timeSuffix) + "</em>" : "") +
+        (t ? "<em>" + escapeHtml(t) + "</em>" : "") +
       "</span>";
     companionActivitiesHost.appendChild(label);
   });
+  // Places restantes en tenant compte de moi + des accompagnants déjà ajoutés.
+  applyChoiceLocks(companionActivitiesHost, externalForCompanion);
 };
 
-// Chevauchements dans la fenêtre d'accompagnant.
+// Capacité + chevauchements dans la fenêtre d'accompagnant.
 companionActivitiesHost.addEventListener("change", (e) => {
   if (e.target.classList && e.target.classList.contains("activity-choice")) {
-    applyOverlapLocks(companionActivitiesHost);
+    applyChoiceLocks(companionActivitiesHost, externalForCompanion);
   }
 });
 
@@ -505,6 +563,10 @@ const saveRsvp = async (payload) => {
 
 const applyRsvpRow = (row) => {
   if (!row) return;
+  // Mes inscriptions déjà en base : elles comptent dans a.taken alors que mon
+  // prochain envoi les remplacera. On les mémorise pour ne pas me bloquer
+  // sur mes propres places.
+  savedMineCounts = countMineSaved(row);
   fullnameInput.value = row.full_name || "";
   presenceRadios.forEach((r) => {
     r.checked = (row.attending && r.value === "oui") ||
@@ -575,6 +637,7 @@ const loadAndShowConnected = async (session) => {
   if (row) {
     applyRsvpRow(row);
   } else {
+    savedMineCounts = new Map();
     renderActivityChoices();
   }
   showRsvp(session.user.email);
@@ -649,6 +712,7 @@ authForm.addEventListener("submit", (e) => {
 
 signOutBtn.addEventListener("click", async () => {
   await supabase.auth.signOut();
+  savedMineCounts = new Map();
   companions.length = 0;
   renderCompanions();
   form.reset();
@@ -711,6 +775,29 @@ form.addEventListener("submit", async (event) => {
   submitButton.textContent = isUpdate ? "Mise à jour en cours…" : "Envoi en cours…";
   setStatus(status, "", "");
   try {
+    // Dernière vérification des places avec des compteurs frais : quelqu'un a
+    // pu remplir une activité entre l'ouverture de la page et l'envoi.
+    await loadActivities();
+    const over = [];
+    const wanted = new Map();
+    const bump = (id) => wanted.set(id, (wanted.get(id) || 0) + 1);
+    payload.activities.forEach(bump);
+    payload.companions.forEach((c) => (c.activities || []).forEach(bump));
+    wanted.forEach((n, id) => {
+      const a = activityById(id);
+      if (!a || a.max_participants == null) return;
+      if (takenByOthers(a) + n > a.max_participants) over.push(a.label);
+    });
+    if (over.length) {
+      submitButton.textContent = originalLabel;
+      setStatus(status, "error",
+        "Plus assez de places pour : " + over.join(", ") +
+        ". Ajustez vos choix (les places viennent d'être prises).");
+      renderActivityChoices(getCheckedActivities());
+      syncActivitiesState();
+      return;
+    }
+
     await saveRsvp(payload);
     const wasUpdate = isUpdate;
     isUpdate = true; // toute soumission ultérieure sera une mise à jour
@@ -718,6 +805,7 @@ form.addEventListener("submit", async (event) => {
     // Rafraîchit les compteurs : une activité peut être passée à "complet"
     // suite à notre propre inscription.
     await loadActivities();
+    savedMineCounts = countMineSaved(payload);
     const myActs = getCheckedActivities();
     renderActivityChoices(myActs);
     syncActivitiesState();
